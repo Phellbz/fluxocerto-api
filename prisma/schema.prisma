@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Movement {
+  id            String   @id @default(uuid())
+  companyId     String
+  occurredAt    DateTime
+  description   String
+  amountCents   Int      // sempre em centavos (evita erro com decimal)
+  direction     String   // "in" ou "out"
+
+  categoryId    String?  // por enquanto opcional
+  bankAccountId String?
+  contactId     String?
+  departmentId  String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([companyId, occurredAt])
+}
