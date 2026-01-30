@@ -20,13 +20,19 @@ enum MovementStatus {
 }
 
 model BankAccount {
-  id          String   @id @default(uuid()) @map("id")
-  companyId   String   @map("company_id")
-  name        String   @map("name")
-  institution String?  @map("institution")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id                 String    @id @default(uuid()) @map("id")
+  companyId          String    @map("company_id")
+  name               String    @map("name")
+  institution        String?   @map("institution")
+  accountType        String?   @map("account_type")
+  openingBalance     Decimal?  @map("opening_balance") @db.Decimal(65, 30)
+  openingBalanceDate DateTime? @map("opening_balance_date") @db.Date
+  isActive           Boolean?  @map("is_active") @default(true)
+  agency             String?   @map("agency")
+  accountNumber     String?   @map("account_number")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
-  movements   Movement[]
+  movements Movement[]
 
   @@index([companyId])
   @@map("bank_accounts")
