@@ -6,11 +6,17 @@ import { AppModule } from './app.module';
 function getFrontendOriginsList(): string[] {
   const env = process.env.FRONTEND_ORIGINS?.trim();
   if (!env) return [];
-  return env.split(',').map((o) => o.trim()).filter(Boolean);
+  return env
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
 }
 
 /** Callback dinâmico para CORS: origem na lista ou FRONTEND_ORIGINS vazio ou origin undefined (curl/postman) => permitir. */
-function corsOriginCallback(origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) {
+function corsOriginCallback(
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean | string) => void,
+) {
   const list = getFrontendOriginsList();
   if (origin === undefined) {
     return callback(null, true);

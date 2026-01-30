@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Headers, Post, BadRequestException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getCompanyIdFromAuthHeader } from '../auth/jwt-company';
@@ -12,7 +19,10 @@ export class ContactsController {
 
   @Get()
   async list(@Headers('authorization') authorization?: string) {
-    const { companyId } = await getCompanyIdFromAuthHeader(this.jwt, authorization);
+    const { companyId } = await getCompanyIdFromAuthHeader(
+      this.jwt,
+      authorization,
+    );
     return this.prisma.contact.findMany({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
@@ -24,7 +34,10 @@ export class ContactsController {
     @Headers('authorization') authorization: string | undefined,
     @Body() body: any,
   ) {
-    const { companyId } = await getCompanyIdFromAuthHeader(this.jwt, authorization);
+    const { companyId } = await getCompanyIdFromAuthHeader(
+      this.jwt,
+      authorization,
+    );
 
     const name = (body?.name || '').trim();
     if (!name) throw new BadRequestException('name is required');

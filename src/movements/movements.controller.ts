@@ -14,8 +14,10 @@ import { ListMovementsQueryDto } from './dto/list-movements-query.dto';
 import { CreateMovementDto } from './dto/create-movement.dto';
 
 /** companyId vem sempre do JWT (req.user). Nunca aceitar do body/query. */
-function getCompanyIdFromReq(req: { user?: { company_id?: string; companyId?: string } }): string {
-  const companyId = (req.user?.company_id ?? req.user?.companyId) as string | undefined;
+function getCompanyIdFromReq(req: {
+  user?: { company_id?: string; companyId?: string };
+}): string {
+  const companyId = req.user?.company_id ?? req.user?.companyId;
   if (!companyId) {
     throw new BadRequestException(
       'companyId ausente no token (não é possível acessar movements)',

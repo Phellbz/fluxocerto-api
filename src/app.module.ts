@@ -10,20 +10,19 @@ import { MeController } from './me/me.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MovementsModule } from './movements/movements.module';
 
+import { BankAccountsModule } from './bank-accounts/bank-accounts.module';
 import { CategoriesController } from './categories/categories.controller';
 import { ContactsController } from './contacts/contacts.controller';
-import { BankAccountsController } from './bank-accounts/bank-accounts.controller';
 import { DepartmentsController } from './departments/departments.controller';
 
 @Module({
-  imports: [AuthModule, PrismaModule, MovementsModule],
+  imports: [AuthModule, PrismaModule, MovementsModule, BankAccountsModule],
   controllers: [
     AppController,
     HealthController,
     MeController,
     CategoriesController,
     ContactsController,
-    BankAccountsController,
     DepartmentsController,
   ],
   providers: [AppService],

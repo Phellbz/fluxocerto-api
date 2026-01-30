@@ -12,7 +12,10 @@ import {
 
 export class CreateMovementDto {
   @IsNotEmpty({ message: 'occurredAt é obrigatório' })
-  @IsDateString({}, { message: 'occurredAt deve ser uma data válida (ISO ou YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'occurredAt deve ser uma data válida (ISO ou YYYY-MM-DD)' },
+  )
   occurredAt: string;
 
   @IsOptional()

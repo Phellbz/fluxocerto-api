@@ -16,8 +16,10 @@ export class MovementsService {
     const limit = Math.min(100, Math.max(1, query.limit ?? 20));
     const skip = (page - 1) * limit;
 
-    const where: { companyId: string; occurredAt?: { gte?: Date; lte?: Date } } =
-      { companyId };
+    const where: {
+      companyId: string;
+      occurredAt?: { gte?: Date; lte?: Date };
+    } = { companyId };
 
     if (query.from || query.to) {
       where.occurredAt = {};

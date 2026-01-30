@@ -13,7 +13,8 @@ export async function getCompanyIdFromAuthHeader(
   });
 
   const companyId = payload?.company_id;
-  if (!companyId) throw new UnauthorizedException('Missing company_id in token');
+  if (!companyId)
+    throw new UnauthorizedException('Missing company_id in token');
 
   return { companyId: String(companyId) };
 }

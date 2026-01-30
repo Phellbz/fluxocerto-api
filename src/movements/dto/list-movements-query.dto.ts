@@ -17,11 +17,17 @@ export class ListMovementsQueryDto {
 
   /** Data inicial (ISO ou YYYY-MM-DD). Filtra movements com occurredAt >= from */
   @IsOptional()
-  @IsDateString({}, { message: 'from deve ser uma data válida (ISO ou YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'from deve ser uma data válida (ISO ou YYYY-MM-DD)' },
+  )
   from?: string;
 
   /** Data final (ISO ou YYYY-MM-DD). Filtra movements com occurredAt <= to */
   @IsOptional()
-  @IsDateString({}, { message: 'to deve ser uma data válida (ISO ou YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'to deve ser uma data válida (ISO ou YYYY-MM-DD)' },
+  )
   to?: string;
 }
