@@ -7,6 +7,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
 
+/** DTO com camelCase ou snake_case (frontend pode enviar ambos). */
+type DtoWithAliases = CreateBankAccountDto & {
+  account_type?: string | null;
+  opening_balance?: number | string | null;
+  opening_balance_date?: string | null;
+  is_active?: boolean | null;
+  account_number?: string | null;
+};
+
 @Injectable()
 export class BankAccountsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,20 +28,30 @@ export class BankAccountsService {
   }
 
   async create(companyId: string, dto: CreateBankAccountDto) {
-    const name = dto.name.trim();
+    const name = (dto.name ?? '').trim();
     if (!name) throw new BadRequestException('name é obrigatório');
+
+    const payload = dto as DtoWithAliases;
+    const accountType = (payload.accountType ?? payload.account_type ?? '').toString().trim();
+    const isActive = payload.isActive ?? payload.is_active ?? true;
+    const institution = (payload.institution ?? '').toString().trim();
+    const agency = (payload.agency ?? '').toString().trim();
+    const accountNumber = (payload.accountNumber ?? payload.account_number ?? '').toString().trim();
+
+    const openingBalance = toDecimal(payload.openingBalance ?? payload.opening_balance);
+    const openingBalanceDate = toDateOnly(payload.openingBalanceDate ?? payload.opening_balance_date);
 
     return this.prisma.bankAccount.create({
       data: {
         companyId,
         name,
-        institution: dto.institution?.trim() ?? null,
-        accountType: dto.accountType?.trim() ?? null,
-        openingBalance: toDecimal(dto.openingBalance),
-        openingBalanceDate: toDateOnly(dto.openingBalanceDate),
-        isActive: dto.isActive ?? null,
-        agency: dto.agency?.trim() ?? null,
-        accountNumber: dto.accountNumber?.trim() ?? null,
+        institution: institution || '',
+        accountType: accountType || '',
+        openingBalance: openingBalance ?? undefined,
+        openingBalanceDate: openingBalanceDate ?? undefined,
+        isActive,
+        agency: agency || '',
+        accountNumber: accountNumber || '',
       },
     });
   }
@@ -47,24 +66,28 @@ export class BankAccountsService {
       );
     }
 
+    const payload = dto as DtoWithAliases;
     const data: Record<string, unknown> = {};
-    if (dto.name !== undefined) {
-      const name = dto.name.trim();
+
+    if (payload.name !== undefined) {
+      const name = (payload.name ?? '').trim();
       if (!name) throw new BadRequestException('name não pode ser vazio');
       data.name = name;
     }
-    if (dto.institution !== undefined)
-      data.institution = dto.institution?.trim() ?? null;
-    if (dto.accountType !== undefined)
-      data.accountType = dto.accountType?.trim() ?? null;
-    if (dto.openingBalance !== undefined)
-      data.openingBalance = toDecimal(dto.openingBalance);
-    if (dto.openingBalanceDate !== undefined)
-      data.openingBalanceDate = toDateOnly(dto.openingBalanceDate);
-    if (dto.isActive !== undefined) data.isActive = dto.isActive;
-    if (dto.agency !== undefined) data.agency = dto.agency?.trim() ?? null;
-    if (dto.accountNumber !== undefined)
-      data.accountNumber = dto.accountNumber?.trim() ?? null;
+    if (payload.institution !== undefined)
+      data.institution = (payload.institution ?? '').toString().trim() || '';
+    if (payload.accountType !== undefined || payload.account_type !== undefined)
+      data.accountType = (payload.accountType ?? payload.account_type ?? '').toString().trim() || '';
+    if (payload.openingBalance !== undefined || payload.opening_balance !== undefined)
+      data.openingBalance = toDecimal(payload.openingBalance ?? payload.opening_balance) ?? undefined;
+    if (payload.openingBalanceDate !== undefined || payload.opening_balance_date !== undefined)
+      data.openingBalanceDate = toDateOnly(payload.openingBalanceDate ?? payload.opening_balance_date) ?? undefined;
+    if (payload.isActive !== undefined || payload.is_active !== undefined)
+      data.isActive = payload.isActive ?? payload.is_active ?? true;
+    if (payload.agency !== undefined)
+      data.agency = (payload.agency ?? '').toString().trim() || '';
+    if (payload.accountNumber !== undefined || payload.account_number !== undefined)
+      data.accountNumber = (payload.accountNumber ?? payload.account_number ?? '').toString().trim() || '';
 
     return this.prisma.bankAccount.update({
       where: { id },
@@ -73,7 +96,7 @@ export class BankAccountsService {
   }
 }
 
-/** Converte number ou string para string (Prisma Decimal aceita string). */
+/** Converte number ou string para string (Prisma Decimal aceita string). Retorna null se não informado. */
 function toDecimal(value: number | string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number') {
@@ -86,7 +109,7 @@ function toDecimal(value: number | string | null | undefined): string | null {
   return Number.isFinite(n) ? String(n) : null;
 }
 
-/** Converte ISO/YYYY-MM-DD para Date (Prisma @db.Date guarda só a data). */
+/** Converte ISO/YYYY-MM-DD para Date (Prisma @db.Date guarda só a data). Retorna null se não informado. */
 function toDateOnly(value: string | null | undefined): Date | null {
   if (value === null || value === undefined || String(value).trim() === '')
     return null;

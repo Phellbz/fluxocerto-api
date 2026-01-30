@@ -6,9 +6,11 @@ import {
   IsBoolean,
   IsDateString,
   MaxLength,
+  Allow,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
+/** Aceita camelCase (preferido) ou snake_case vindo do frontend. */
 export class CreateBankAccountDto {
   @IsNotEmpty({ message: 'name é obrigatório' })
   @IsString()
@@ -25,11 +27,20 @@ export class CreateBankAccountDto {
   @MaxLength(100)
   accountType?: string | null;
 
-  /** Valor numérico ou string (ex: "1234.56"). Persistido como Decimal. */
+  /** snake_case alternativo (frontend pode enviar account_type) */
+  @IsOptional()
+  @Allow()
+  account_type?: string | null;
+
+  /** Valor numérico ou string. Persistido como Decimal. */
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   openingBalance?: number | null;
+
+  @IsOptional()
+  @Allow()
+  opening_balance?: number | string | null;
 
   /** Data em ISO ou YYYY-MM-DD. Persistido como date (sem horário). */
   @IsOptional()
@@ -37,9 +48,17 @@ export class CreateBankAccountDto {
   openingBalanceDate?: string | null;
 
   @IsOptional()
+  @Allow()
+  opening_balance_date?: string | null;
+
+  @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean | null;
+
+  @IsOptional()
+  @Allow()
+  is_active?: boolean | null;
 
   @IsOptional()
   @IsString()
@@ -50,4 +69,8 @@ export class CreateBankAccountDto {
   @IsString()
   @MaxLength(50)
   accountNumber?: string | null;
+
+  @IsOptional()
+  @Allow()
+  account_number?: string | null;
 }

@@ -38,20 +38,20 @@ function getCompanyIdFromRequest(
 }
 
 /**
- * Exemplo de teste (sanity check):
+ * Exemplo de teste (sanity check) — account_type e is_active nunca NULL no banco:
+ *
+ * # Criar conta com accountType e isActive (sem openingBalance/openingBalanceDate)
+ * curl -s -X POST https://fluxocerto-api-production.up.railway.app/bank-accounts \
+ *   -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: c_1" -H "Content-Type: application/json" \
+ *   -d '{"name":"Conta Corrente","institution":"Banco X","accountType":"checking","isActive":true,"agency":"1234","accountNumber":"56789-0"}'
  *
  * # Listar (requer JWT + X-Company-Id)
  * curl -s -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: c_1" https://fluxocerto-api-production.up.railway.app/bank-accounts
  *
- * # Criar conta com novos campos
- * curl -s -X POST https://fluxocerto-api-production.up.railway.app/bank-accounts \
- *   -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: c_1" -H "Content-Type: application/json" \
- *   -d '{"name":"Conta Corrente","institution":"Banco X","accountType":"checking","openingBalance":1000.50,"openingBalanceDate":"2025-01-01","isActive":true,"agency":"1234","accountNumber":"56789-0"}'
- *
  * # Atualizar conta (PATCH)
  * curl -s -X PATCH https://fluxocerto-api-production.up.railway.app/bank-accounts/ID_DA_CONTA \
  *   -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: c_1" -H "Content-Type: application/json" \
- *   -d '{"openingBalance":2000,"isActive":false}'
+ *   -d '{"accountType":"savings","isActive":false}'
  */
 @Controller('bank-accounts')
 @UseGuards(JwtAuthGuard)
