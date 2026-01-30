@@ -1,10 +1,20 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS: permita o domínio do seu frontend (no começo pode liberar geral)
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+
+  // CORS: permita o domínio do seu frontend (no começo pode restringir)
   app.enableCors({
     origin: true, // ✅ libera qualquer origem (dev). Depois a gente restringe.
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

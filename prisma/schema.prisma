@@ -7,21 +7,106 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+enum MovementDirection {
+  in
+  out
+}
+
+enum MovementStatus {
+  REALIZED
+  PENDING
+  CANCELED
+}
+
+model BankAccount {
+  id          String   @id @default(uuid()) @map("id")
+  companyId   String   @map("company_id")
+  name        String   @map("name")
+  institution String?  @map("institution")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  movements   Movement[]
+
+  @@index([companyId])
+  @@map("bank_accounts")
+}
+
+model Category {
+  id        String   @id @default(uuid()) @map("id")
+  companyId String   @map("company_id")
+  name      String   @map("name")
+  groupName String?  @map("group_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  movements Movement[]
+
+  @@index([companyId])
+  @@map("categories")
+}
+
+model Contact {
+  id        String   @id @default(uuid()) @map("id")
+  companyId String   @map("company_id")
+  name      String   @map("name")
+  tradeName String?  @map("trade_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  movements Movement[]
+
+  @@index([companyId])
+  @@map("contacts")
+}
+
+model Department {
+  id        String   @id @default(uuid()) @map("id")
+  companyId String   @map("company_id")
+  name      String   @map("name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  movements Movement[]
+
+  @@index([companyId])
+  @@map("departments")
+}
+
 model Movement {
-  id            String   @id @default(uuid())
-  companyId     String
-  occurredAt    DateTime
-  description   String
-  amountCents   Int      // sempre em centavos (evita erro com decimal)
-  direction     String   // "in" ou "out"
+  id           String            @id @default(uuid()) @map("id")
+  companyId    String            @map("company_id")
 
-  categoryId    String?  // por enquanto opcional
-  bankAccountId String?
-  contactId     String?
-  departmentId  String?
+  occurredAt   DateTime          @map("occurred_at")
+  description  String            @map("description")
+  amountCents  Int               @map("amount_cents")
+  direction    MovementDirection @map("direction")
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Relacionamentos opcionais (o form manda alguns deles)
+  bankAccountId String?   @map("bank_account_id")
+  categoryId    String?   @map("category_id")
+  contactId     String?   @map("contact_id")
+  departmentId  String?   @map("department_id")
+
+  bankAccount  BankAccount? @relation(fields: [bankAccountId], references: [id])
+  category     Category?    @relation(fields: [categoryId], references: [id])
+  contact      Contact?     @relation(fields: [contactId], references: [id])
+  department   Department?  @relation(fields: [departmentId], references: [id])
+
+  // Campos opcionais do seu form (deixe simples por agora)
+  project       String?         @map("project")
+  documentType  String?         @map("document_type")
+  documentNumber String?        @map("document_number")
+  observations  String?         @map("observations")
+
+  status       MovementStatus?  @map("status")
+  source       String?          @map("source")
+  isReconciled Boolean?         @map("is_reconciled")
+
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
 
   @@index([companyId, occurredAt])
+  @@index([bankAccountId])
+  @@index([categoryId])
+  @@index([contactId])
+  @@index([departmentId])
+  @@map("movements")
 }

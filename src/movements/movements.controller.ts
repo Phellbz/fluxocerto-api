@@ -1,49 +1,43 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MovementsService } from './movements.service';
+import { ListMovementsQueryDto } from './dto/list-movements-query.dto';
+import { CreateMovementDto } from './dto/create-movement.dto';
 
-type CreateMovementDto = {
-  occurredAt: string; // ISO
-  description: string;
-  amountCents: number;
-  direction: 'in' | 'out';
-  categoryId?: string | null;
-  bankAccountId?: string | null;
-  contactId?: string | null;
-  departmentId?: string | null;
-};
+/** companyId vem sempre do JWT (req.user). Nunca aceitar do body/query. */
+function getCompanyIdFromReq(req: { user?: { company_id?: string; companyId?: string } }): string {
+  const companyId = (req.user?.company_id ?? req.user?.companyId) as string | undefined;
+  if (!companyId) {
+    throw new BadRequestException(
+      'companyId ausente no token (não é possível acessar movements)',
+    );
+  }
+  return companyId;
+}
 
 @Controller('movements')
 @UseGuards(JwtAuthGuard)
 export class MovementsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly movementsService: MovementsService) {}
 
   @Get()
-  async list(@Req() req: any) {
-    const companyId = req.user.company_id as string;
-
-    return this.prisma.movement.findMany({
-      where: { companyId },
-      orderBy: { occurredAt: 'desc' },
-    });
+  async list(@Req() req: any, @Query() query: ListMovementsQueryDto) {
+    const companyId = getCompanyIdFromReq(req);
+    return this.movementsService.list(companyId, query);
   }
 
   @Post()
   async create(@Req() req: any, @Body() dto: CreateMovementDto) {
-    const companyId = req.user.company_id as string;
-
-    return this.prisma.movement.create({
-      data: {
-        companyId,
-        occurredAt: new Date(dto.occurredAt),
-        description: dto.description,
-        amountCents: dto.amountCents,
-        direction: dto.direction,
-        categoryId: dto.categoryId ?? null,
-        bankAccountId: dto.bankAccountId ?? null,
-        contactId: dto.contactId ?? null,
-        departmentId: dto.departmentId ?? null,
-      },
-    });
+    const companyId = getCompanyIdFromReq(req);
+    return this.movementsService.create(companyId, dto);
   }
 }
