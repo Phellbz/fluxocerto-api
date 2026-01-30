@@ -57,6 +57,16 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## CORS e variáveis (Railway)
+
+No **Railway**, no serviço do **backend**, configure:
+
+- **`FRONTEND_ORIGINS`** (CSV): origens permitidas para CORS. Exemplo:  
+  `https://SEU-FRONT.netlify.app,https://studio-ai.google.com`  
+  (substitua pela URL real do seu front no Netlify e pela do Studio AI, se usar.)
+
+O backend usa `credentials: true` e permite os headers `Content-Type`, `Authorization` e `X-Company-Id`. Cookies de auth (ex.: refresh) devem usar `HttpOnly`, `Secure` e `SameSite=Lax` (veja `src/auth/cookie-options.ts`).
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
