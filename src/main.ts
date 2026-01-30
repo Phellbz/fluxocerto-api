@@ -2,23 +2,26 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
-/** Origens permitidas para CORS. CSV em FRONTEND_ORIGINS (ex: "https://seu-app.netlify.app,https://studio-ai.google.com"). Em dev, localhost é acrescentado. */
-function getAllowedOrigins(): string[] | true {
+/** Lista de origens permitidas (CSV em FRONTEND_ORIGINS). Vazio = modo permissivo (qualquer origem). */
+function getFrontendOriginsList(): string[] {
   const env = process.env.FRONTEND_ORIGINS?.trim();
-  const list = env ? env.split(',').map((o) => o.trim()).filter(Boolean) : [];
-  if (process.env.NODE_ENV !== 'production') {
-    const localhost = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:4173',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:4173',
-    ];
-    const combined = [...new Set([...list, ...localhost])];
-    return combined.length ? combined : true;
+  if (!env) return [];
+  return env.split(',').map((o) => o.trim()).filter(Boolean);
+}
+
+/** Callback dinâmico para CORS: origem na lista ou FRONTEND_ORIGINS vazio ou origin undefined (curl/postman) => permitir. */
+function corsOriginCallback(origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) {
+  const list = getFrontendOriginsList();
+  if (origin === undefined) {
+    return callback(null, true);
   }
-  return list.length ? list : [];
+  if (list.length === 0) {
+    return callback(null, true);
+  }
+  if (list.includes(origin)) {
+    return callback(null, origin);
+  }
+  callback(null, false);
 }
 
 async function bootstrap() {
@@ -33,9 +36,8 @@ async function bootstrap() {
     }),
   );
 
-  const origins = getAllowedOrigins();
   app.enableCors({
-    origin: origins,
+    origin: corsOriginCallback,
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Company-Id'],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
