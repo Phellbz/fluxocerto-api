@@ -42,7 +42,7 @@ model Category {
   id        String   @id @default(uuid()) @map("id")
   companyId String   @map("company_id")
   name      String   @map("name")
-  groupName String?  @map("group_name")
+  groupName String   @map("group_name")
   createdAt DateTime @default(now()) @map("created_at")
 
   movements Movement[]
