@@ -20,8 +20,9 @@ enum MovementStatus {
 }
 
 enum CategoryFlowType {
-  IN  @map("in")
-  OUT @map("out")
+  INCOME   @map("income")
+  EXPENSE  @map("expense")
+  TRANSFER @map("transfer")
 }
 
 model BankAccount {
@@ -48,7 +49,7 @@ model Category {
   companyId   String           @map("company_id")
   groupId     String?          @map("group_id")
   name        String           @map("name")
-  flowType    CategoryFlowType @default(OUT) @map("flow_type")
+  flowType    CategoryFlowType @default(EXPENSE) @map("flow_type")
   affectsCash Boolean          @default(true) @map("affects_cash")
   isActive    Boolean          @default(true) @map("is_active")
   groupName   String?          @map("group_name")
@@ -56,6 +57,7 @@ model Category {
 
   movements Movement[]
 
+  @@unique([companyId, name], map: "categories_company_name_unique")
   @@index([companyId])
   @@map("categories")
 }
