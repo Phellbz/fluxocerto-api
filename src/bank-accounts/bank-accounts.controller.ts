@@ -9,34 +9,12 @@ import {
   Post,
   Req,
   UseGuards,
-  BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
+import { getCompanyIdFromRequest } from '../auth/company-id';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BankAccountsService } from './bank-accounts.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
-
-/** companyId vem do header X-Company-Id. Valida que o usuário (JWT) pertence à empresa. Não aceitar company_id do body. */
-function getCompanyIdFromRequest(
-  req: { user?: { company_id?: string; companyId?: string } },
-  xCompanyId: string | undefined,
-): string {
-  const companyId = (xCompanyId || '').trim();
-  if (!companyId) {
-    throw new BadRequestException('Header X-Company-Id é obrigatório');
-  }
-  const jwtCompanyId = req.user?.company_id ?? req.user?.companyId;
-  if (!jwtCompanyId) {
-    throw new BadRequestException('company_id ausente no token');
-  }
-  if (jwtCompanyId !== companyId) {
-    throw new ForbiddenException(
-      'Usuário não pertence à empresa informada em X-Company-Id',
-    );
-  }
-  return companyId;
-}
 
 /**
  * Smoke test — valor inicial e data do saldo inicial (openingBalance / openingBalanceDate):

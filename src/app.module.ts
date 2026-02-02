@@ -11,17 +11,22 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { MovementsModule } from './movements/movements.module';
 
 import { BankAccountsModule } from './bank-accounts/bank-accounts.module';
-import { CategoriesController } from './categories/categories.controller';
+import { CategoriesModule } from './categories/categories.module';
 import { ContactsController } from './contacts/contacts.controller';
 import { DepartmentsController } from './departments/departments.controller';
 
 @Module({
-  imports: [AuthModule, PrismaModule, MovementsModule, BankAccountsModule],
+  imports: [
+    AuthModule,
+    PrismaModule,
+    MovementsModule,
+    BankAccountsModule,
+    CategoriesModule,
+  ],
   controllers: [
     AppController,
     HealthController,
     MeController,
-    CategoriesController,
     ContactsController,
     DepartmentsController,
   ],
