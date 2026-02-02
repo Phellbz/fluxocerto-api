@@ -30,6 +30,16 @@ export class CategoriesController {
     return this.categoriesService.list(companyId);
   }
 
+  @Post('bootstrap')
+  async bootstrap(
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    const result = await this.categoriesService.bootstrapDefaults(companyId);
+    return { ok: true, ...result };
+  }
+
   @Post()
   async create(
     @Req() req: { user?: { company_id?: string; companyId?: string } },
