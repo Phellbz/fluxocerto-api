@@ -42,7 +42,7 @@ export class ContactsController {
     const name = (body?.name || '').trim();
     if (!name) throw new BadRequestException('name is required');
 
-    const tradeName = body?.tradeName ? String(body.tradeName).trim() : null;
+    const tradeName = (body?.tradeName != null ? String(body.tradeName).trim() : '') || '';
 
     return this.prisma.contact.create({
       data: { companyId, name, tradeName },

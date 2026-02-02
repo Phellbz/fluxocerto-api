@@ -63,11 +63,25 @@ model Category {
 }
 
 model Contact {
-  id        String   @id @default(uuid()) @map("id")
-  companyId String   @map("company_id")
-  name      String   @map("name")
-  tradeName String?  @map("trade_name")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid()) @map("id")
+  companyId    String?   @map("company_id")
+
+  type         String    @default("customer") @map("type")
+  document     String    @default("") @map("document")
+  name         String    @default("") @map("name")
+  tradeName    String    @default("") @map("trade_name")
+
+  phone        String?   @map("phone")
+  email        String?   @map("email")
+  city         String?   @map("city")
+  state        String?   @map("state")
+  address      String?   @map("address")
+  neighborhood String?   @map("neighborhood")
+  zipCode      String?   @map("zip_code")
+  createdBy    String?   @map("created_by")
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   movements Movement[]
 
