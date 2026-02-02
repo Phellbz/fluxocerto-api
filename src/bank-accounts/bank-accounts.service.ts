@@ -50,7 +50,7 @@ export class BankAccountsService {
 
   async list(companyId: string) {
     const rows = await this.prisma.bankAccount.findMany({
-      where: { companyId },
+      where: { companyId, isActive: true },
       orderBy: { createdAt: 'desc' },
     });
     return rows.map(toBankAccountResponse);
@@ -133,6 +133,23 @@ export class BankAccountsService {
     const updated = await this.prisma.bankAccount.update({
       where: { id },
       data,
+    });
+    return toBankAccountResponse(updated as BankAccountRecord);
+  }
+
+  /** Soft delete: marca isActive=false. Não apaga fisicamente (preserva FK de movements). */
+  async remove(companyId: string, id: string) {
+    const existing = await this.prisma.bankAccount.findFirst({
+      where: { id, companyId },
+    });
+    if (!existing) {
+      throw new NotFoundException(
+        'Conta bancária não encontrada ou não pertence à empresa',
+      );
+    }
+    const updated = await this.prisma.bankAccount.update({
+      where: { id },
+      data: { isActive: false },
     });
     return toBankAccountResponse(updated as BankAccountRecord);
   }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   Param,
@@ -106,5 +107,15 @@ export class BankAccountsController {
   ) {
     const companyId = getCompanyIdFromRequest(req, xCompanyId);
     return this.bankAccountsService.update(companyId, id, dto);
+  }
+
+  @Delete(':id')
+  async remove(
+    @Param('id') id: string,
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.bankAccountsService.remove(companyId, id);
   }
 }
