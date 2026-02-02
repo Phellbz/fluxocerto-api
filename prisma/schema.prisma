@@ -19,6 +19,11 @@ enum MovementStatus {
   CANCELED
 }
 
+enum CategoryFlowType {
+  IN  @map("in")
+  OUT @map("out")
+}
+
 model BankAccount {
   id                 String    @id @default(uuid()) @map("id")
   companyId          String    @map("company_id")
@@ -39,11 +44,15 @@ model BankAccount {
 }
 
 model Category {
-  id        String   @id @default(uuid()) @map("id")
-  companyId String   @map("company_id")
-  name      String   @map("name")
-  groupName String?  @map("group_name")
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String           @id @default(uuid()) @map("id")
+  companyId   String           @map("company_id")
+  groupId     String?          @map("group_id")
+  name        String           @map("name")
+  flowType    CategoryFlowType @default(OUT) @map("flow_type")
+  affectsCash Boolean          @default(true) @map("affects_cash")
+  isActive    Boolean          @default(true) @map("is_active")
+  groupName   String?          @map("group_name")
+  createdAt   DateTime         @default(now()) @map("created_at")
 
   movements Movement[]
 
