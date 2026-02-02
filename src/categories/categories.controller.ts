@@ -42,7 +42,7 @@ export class CategoriesController {
     const name = (body?.name || '').trim();
     if (!name) throw new BadRequestException('name is required');
 
-    const groupName = body?.groupName ? String(body.groupName).trim() : null;
+    const groupName = body?.groupName ? String(body.groupName).trim() : '';
 
     return this.prisma.category.create({
       data: { companyId, name, groupName },

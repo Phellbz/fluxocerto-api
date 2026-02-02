@@ -38,20 +38,30 @@ function getCompanyIdFromRequest(
 }
 
 /**
- * Exemplo de teste (sanity check) — account_type e is_active nunca NULL no banco:
+ * Smoke test — valor inicial e data do saldo inicial (openingBalance / openingBalanceDate):
  *
- * # Criar conta com accountType e isActive (sem openingBalance/openingBalanceDate)
- * curl -s -X POST https://fluxocerto-api-production.up.railway.app/bank-accounts \
- *   -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: c_1" -H "Content-Type: application/json" \
- *   -d '{"name":"Conta Corrente","institution":"Banco X","accountType":"checking","isActive":true,"agency":"1234","accountNumber":"56789-0"}'
+ * 1) Criar conta com openingBalance e openingBalanceDate:
+ *    curl -s -X POST https://SEU_HOST/bank-accounts \
+ *      -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: SEU_COMPANY_ID" -H "Content-Type: application/json" \
+ *      -d '{"name":"Conta Teste","institution":"Banco X","accountType":"checking","openingBalance":1500.50,"openingBalanceDate":"2025-01-01"}'
+ *    → Confirmar no retorno do POST que openingBalance e openingBalanceDate vêm preenchidos.
  *
- * # Listar (requer JWT + X-Company-Id)
- * curl -s -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: c_1" https://fluxocerto-api-production.up.railway.app/bank-accounts
+ * 2) GET por id e LIST:
+ *    curl -s -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: SEU_COMPANY_ID" https://SEU_HOST/bank-accounts
+ *    curl -s -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: SEU_COMPANY_ID" https://SEU_HOST/bank-accounts/ID_DA_CONTA
+ *    → Confirmar que openingBalance e openingBalanceDate aparecem em ambos.
  *
- * # Atualizar conta (PATCH)
- * curl -s -X PATCH https://fluxocerto-api-production.up.railway.app/bank-accounts/ID_DA_CONTA \
- *   -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: c_1" -H "Content-Type: application/json" \
- *   -d '{"accountType":"savings","isActive":false}'
+ * 3) Atualizar apenas openingBalanceDate (PATCH):
+ *    curl -s -X PATCH https://SEU_HOST/bank-accounts/ID_DA_CONTA \
+ *      -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: SEU_COMPANY_ID" -H "Content-Type: application/json" \
+ *      -d '{"openingBalanceDate":"2025-02-01"}'
+ *    → Confirmar persistência; openingBalance deve permanecer inalterado.
+ *
+ * 4) Atualizar sem mandar openingBalance/openingBalanceDate (ex.: só name):
+ *    curl -s -X PATCH https://SEU_HOST/bank-accounts/ID_DA_CONTA \
+ *      -H "Authorization: Bearer SEU_JWT" -H "X-Company-Id: SEU_COMPANY_ID" -H "Content-Type: application/json" \
+ *      -d '{"name":"Conta Renomeada"}'
+ *    → Garantir que NÃO zera: openingBalance e openingBalanceDate devem continuar com os valores anteriores.
  */
 @Controller('bank-accounts')
 @UseGuards(JwtAuthGuard)
@@ -65,6 +75,16 @@ export class BankAccountsController {
   ) {
     const companyId = getCompanyIdFromRequest(req, xCompanyId);
     return this.bankAccountsService.list(companyId);
+  }
+
+  @Get(':id')
+  async getById(
+    @Param('id') id: string,
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId?: string,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.bankAccountsService.getById(companyId, id);
   }
 
   @Post()

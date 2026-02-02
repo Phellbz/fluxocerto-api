@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
@@ -16,15 +17,55 @@ type DtoWithAliases = CreateBankAccountDto & {
   account_number?: string | null;
 };
 
+/** Registro de conta bancária como retornado pelo Prisma. */
+type BankAccountRecord = {
+  id: string;
+  companyId: string;
+  name: string;
+  institution: string;
+  accountType: string;
+  openingBalance: Prisma.Decimal | null;
+  openingBalanceDate: Date | null;
+  isActive: boolean;
+  agency: string;
+  accountNumber: string;
+  createdAt: Date;
+};
+
+/** Serializa openingBalance (Decimal) e openingBalanceDate (Date) para JSON amigável ao frontend. */
+function toBankAccountResponse(record: BankAccountRecord) {
+  return {
+    ...record,
+    openingBalance:
+      record.openingBalance != null ? Number(record.openingBalance) : null,
+    openingBalanceDate: record.openingBalanceDate
+      ? record.openingBalanceDate.toISOString().slice(0, 10)
+      : null,
+  };
+}
+
 @Injectable()
 export class BankAccountsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(companyId: string) {
-    return this.prisma.bankAccount.findMany({
+    const rows = await this.prisma.bankAccount.findMany({
       where: { companyId },
       orderBy: { createdAt: 'desc' },
     });
+    return rows.map(toBankAccountResponse);
+  }
+
+  async getById(companyId: string, id: string) {
+    const row = await this.prisma.bankAccount.findFirst({
+      where: { id, companyId },
+    });
+    if (!row) {
+      throw new NotFoundException(
+        'Conta bancária não encontrada ou não pertence à empresa',
+      );
+    }
+    return toBankAccountResponse(row as BankAccountRecord);
   }
 
   async create(companyId: string, dto: CreateBankAccountDto) {
@@ -89,10 +130,11 @@ export class BankAccountsService {
     if (payload.accountNumber !== undefined || payload.account_number !== undefined)
       data.accountNumber = (payload.accountNumber ?? payload.account_number ?? '').toString().trim() || '';
 
-    return this.prisma.bankAccount.update({
+    const updated = await this.prisma.bankAccount.update({
       where: { id },
       data,
     });
+    return toBankAccountResponse(updated as BankAccountRecord);
   }
 }
 
