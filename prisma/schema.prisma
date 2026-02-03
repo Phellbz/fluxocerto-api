@@ -33,21 +33,36 @@ enum CompanyRole {
   member
 }
 
-model BankAccount {
-  id                 String    @id @default(uuid()) @map("id")
-  companyId          String    @map("company_id")
-  name               String    @map("name")
-  institution        String    @map("institution") @default("")
-  accountType        String    @map("account_type") @default("")
-  openingBalance     Decimal?  @map("opening_balance") @db.Decimal(65, 30)
-  openingBalanceDate DateTime? @map("opening_balance_date") @db.Date
-  isActive           Boolean   @map("is_active") @default(true)
-  agency             String    @map("agency") @default("")
-  accountNumber      String    @map("account_number") @default("")
-  createdAt          DateTime  @default(now()) @map("created_at")
+enum BankAccountType {
+  checking @map("checking")
+  savings  @map("savings")
+  cash     @map("cash")
+}
 
+enum ContactType {
+  client   @map("client")
+  supplier @map("supplier")
+  both     @map("both")
+}
+
+model BankAccount {
+  id                 String          @id @default(uuid()) @map("id")
+  companyId          String          @map("company_id")
+  name               String          @map("name")
+  institution        String          @map("institution") @default("")
+  agency             String          @map("agency") @default("")
+  accountNumber      String          @map("account_number") @default("")
+  accountType        BankAccountType @map("account_type") @default(checking)
+  openingBalance     Decimal?        @map("opening_balance") @db.Decimal(14, 2)
+  openingBalanceDate DateTime?      @map("opening_balance_date") @db.Date
+  isActive           Boolean         @map("is_active") @default(true)
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
   movements Movement[]
 
+  @@unique([companyId, name], map: "bank_accounts_company_name_unique")
   @@index([companyId])
   @@map("bank_accounts")
 }
@@ -57,12 +72,15 @@ model Category {
   companyId   String           @map("company_id")
   groupId     String?          @map("group_id")
   name        String           @map("name")
+  groupName   String           @map("group_name") @default("")
   flowType    CategoryFlowType @default(EXPENSE) @map("flow_type")
   affectsCash Boolean          @default(true) @map("affects_cash")
+  isSystem    Boolean          @default(false) @map("is_system")
   isActive    Boolean          @default(true) @map("is_active")
-  groupName   String?          @map("group_name")
   createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   movements Movement[]
 
   @@unique([companyId, name], map: "categories_company_name_unique")
@@ -71,28 +89,30 @@ model Category {
 }
 
 model Contact {
-  id           String    @id @default(uuid()) @map("id")
-  companyId    String?   @map("company_id")
+  id        String      @id @default(uuid()) @map("id")
+  companyId String      @map("company_id")
+  type      ContactType @default(client) @map("type")
+  document  String?     @map("document")
+  name      String      @map("name") @default("")
+  tradeName String      @map("trade_name") @default("")
 
-  type         String    @default("customer") @map("type")
-  document     String    @default("") @map("document")
-  name         String    @default("") @map("name")
-  tradeName    String    @default("") @map("trade_name")
+  phone        String? @map("phone")
+  email        String? @map("email")
+  address      String? @map("address")
+  neighborhood String? @map("neighborhood")
+  city         String? @map("city")
+  state        String? @map("state")
+  zipCode      String? @map("zip_code")
+  createdBy    String?  @map("created_by")
 
-  phone        String?   @map("phone")
-  email        String?   @map("email")
-  city         String?   @map("city")
-  state        String?   @map("state")
-  address      String?   @map("address")
-  neighborhood String?   @map("neighborhood")
-  zipCode      String?   @map("zip_code")
-  createdBy    String?   @map("created_by")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   movements Movement[]
 
+  @@unique([companyId, document], map: "contacts_company_document_unique")
   @@index([companyId])
   @@map("contacts")
 }
@@ -101,12 +121,15 @@ model Department {
   id          String    @id @default(uuid()) @map("id")
   companyId   String    @map("company_id")
   name        String    @map("name")
-  description String?  @map("description")
-  isActive    Boolean?  @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  description String?   @map("description")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   movements Movement[]
 
+  @@unique([companyId, name], map: "departments_company_name_unique")
   @@index([companyId])
   @@map("departments")
 }
@@ -233,33 +256,32 @@ model BudgetItem {
 }
 
 model Product {
-  id              String    @id @default(uuid()) @map("id")
-  companyId       String    @map("company_id")
+  id               String    @id @default(uuid()) @map("id")
+  companyId        String    @map("company_id")
+  codigoProduto    String    @map("codigo_produto") @default("")
+  descricao        String    @map("descricao") @default("")
+  unidade          String?   @map("unidade")
+  precoCusto       Decimal?  @map("preco_custo") @db.Decimal(14, 2)
+  precoVenda       Decimal?  @map("preco_venda") @db.Decimal(14, 2)
+  estoqueAtual     Decimal?  @map("estoque_atual") @db.Decimal(14, 2)
+  estoqueMinimo    Decimal?  @map("estoque_minimo") @db.Decimal(14, 2)
+  estoqueInicial   Decimal?  @map("estoque_inicial") @db.Decimal(14, 2)
+  localEstoque     String?   @map("local_estoque")
+  ncm              String?   @map("ncm")
+  codigoIntegracao String?   @map("codigo_integracao")
+  marca            String?   @map("marca")
+  familia          String?   @map("familia")
+  modelo           String?   @map("modelo")
+  tipo             String?   @map("tipo")
+  pesoLiquido      Decimal?  @map("peso_liquido") @db.Decimal(14, 2)
+  pesoBruto        Decimal?  @map("peso_bruto") @db.Decimal(14, 2)
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  codigoIntegracao String?  @map("codigo_integracao")
-  codigoProduto    String?  @map("codigo_produto")
-  descricao        String?  @map("descricao")
-  ncm              String?  @map("ncm")
-  unidade          String?  @map("unidade")
-  familia          String?  @map("familia")
-  marca            String?  @map("marca")
-  modelo           String?  @map("modelo")
-  tipo             String?  @map("tipo")
-  localEstoque     String?  @map("local_estoque")
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
-  estoqueMinimo   Decimal?  @map("estoque_minimo") @db.Decimal(14, 2)
-  estoqueAtual    Decimal?  @map("estoque_atual") @db.Decimal(14, 2)
-  estoqueInicial  Decimal?  @map("estoque_inicial") @db.Decimal(14, 2)
-
-  precoCusto      Decimal?  @map("preco_custo") @db.Decimal(14, 2)
-  precoVenda      Decimal?  @map("preco_venda") @db.Decimal(14, 2)
-
-  pesoLiquido     Decimal?  @map("peso_liquido") @db.Decimal(14, 2)
-  pesoBruto       Decimal?  @map("peso_bruto") @db.Decimal(14, 2)
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
+  @@unique([companyId, codigoProduto], map: "products_company_codigo_unique")
   @@index([companyId], map: "products_company_idx")
   @@index([codigoProduto], map: "products_codigo_idx")
   @@map("products")
@@ -290,8 +312,13 @@ model Company {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  members CompanyMember[]
-  config  CompanyConfig?
+  members      CompanyMember[]
+  config       CompanyConfig?
+  bankAccounts BankAccount[]
+  contacts     Contact[]
+  categories   Category[]
+  departments  Department[]
+  products     Product[]
 
   @@map("companies")
 }

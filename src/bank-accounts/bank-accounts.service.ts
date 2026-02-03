@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BankAccountType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
@@ -17,13 +17,21 @@ type DtoWithAliases = CreateBankAccountDto & {
   account_number?: string | null;
 };
 
+/** Converte string do DTO para enum Prisma. */
+function toBankAccountType(v: string | null | undefined): BankAccountType {
+  const s = (v ?? '').toString().trim().toLowerCase();
+  if (s === 'savings') return BankAccountType.savings;
+  if (s === 'cash') return BankAccountType.cash;
+  return BankAccountType.checking;
+}
+
 /** Registro de conta bancária como retornado pelo Prisma. */
 type BankAccountRecord = {
   id: string;
   companyId: string;
   name: string;
   institution: string;
-  accountType: string;
+  accountType: BankAccountType | string;
   openingBalance: Prisma.Decimal | null;
   openingBalanceDate: Date | null;
   isActive: boolean;
@@ -82,12 +90,12 @@ export class BankAccountsService {
     const openingBalance = toDecimal(payload.openingBalance ?? payload.opening_balance);
     const openingBalanceDate = toDateOnly(payload.openingBalanceDate ?? payload.opening_balance_date);
 
-    return this.prisma.bankAccount.create({
+    const created = await this.prisma.bankAccount.create({
       data: {
         companyId,
         name,
         institution: institution || '',
-        accountType: accountType || '',
+        accountType: toBankAccountType(accountType || ''),
         openingBalance: openingBalance ?? undefined,
         openingBalanceDate: openingBalanceDate ?? undefined,
         isActive,
@@ -95,6 +103,7 @@ export class BankAccountsService {
         accountNumber: accountNumber || '',
       },
     });
+    return toBankAccountResponse(created as BankAccountRecord);
   }
 
   async update(companyId: string, id: string, dto: UpdateBankAccountDto) {
@@ -118,7 +127,7 @@ export class BankAccountsService {
     if (payload.institution !== undefined)
       data.institution = (payload.institution ?? '').toString().trim() || '';
     if (payload.accountType !== undefined || payload.account_type !== undefined)
-      data.accountType = (payload.accountType ?? payload.account_type ?? '').toString().trim() || '';
+      data.accountType = toBankAccountType(payload.accountType ?? payload.account_type ?? '');
     if (payload.openingBalance !== undefined || payload.opening_balance !== undefined)
       data.openingBalance = toDecimal(payload.openingBalance ?? payload.opening_balance) ?? undefined;
     if (payload.openingBalanceDate !== undefined || payload.opening_balance_date !== undefined)

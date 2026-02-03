@@ -26,7 +26,7 @@ export class DepartmentsService {
         dto.description != null && dto.description !== ''
           ? dto.description.trim()
           : null,
-      isActive: dto.isActive ?? null,
+      isActive: dto.isActive ?? true,
     };
 
     console.log('[departments] prisma.create data', data);

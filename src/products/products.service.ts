@@ -57,8 +57,9 @@ function buildProductUpdateData(
   if (dto.codigoIntegracao !== undefined)
     data.codigoIntegracao = str(dto.codigoIntegracao);
   if (dto.codigoProduto !== undefined)
-    data.codigoProduto = str(dto.codigoProduto);
-  if (dto.descricao !== undefined) data.descricao = str(dto.descricao);
+    data.codigoProduto = (str(dto.codigoProduto) ?? '').trim() || '';
+  if (dto.descricao !== undefined)
+    data.descricao = (str(dto.descricao) ?? '').trim() || '';
   if (dto.ncm !== undefined) data.ncm = str(dto.ncm);
   if (dto.unidade !== undefined) data.unidade = str(dto.unidade);
   if (dto.familia !== undefined) data.familia = str(dto.familia);

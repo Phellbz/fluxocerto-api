@@ -1,7 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ContactType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
+
+function toContactType(v: string | null | undefined): ContactType {
+  const s = (v ?? '').toString().trim().toLowerCase();
+  if (s === 'supplier') return ContactType.supplier;
+  if (s === 'both') return ContactType.both;
+  return ContactType.client;
+}
 
 @Injectable()
 export class ContactsService {
@@ -47,7 +55,9 @@ export class ContactsService {
 
     console.log('[contacts] prisma.create data', data);
 
-    return this.prisma.contact.create({ data });
+    return this.prisma.contact.create({
+      data: data as Prisma.ContactUncheckedCreateInput,
+    });
   }
 
   async update(companyId: string, id: string, dto: UpdateContactDto) {
@@ -63,7 +73,7 @@ export class ContactsService {
     const data: Record<string, unknown> = {};
 
     if (dto.type !== undefined)
-      data.type = (dto.type ?? 'customer').trim() || 'customer';
+      data.type = toContactType(dto.type ?? 'customer');
     if (dto.document !== undefined)
       data.document = (dto.document ?? '').toString().trim();
     if (dto.name !== undefined)
