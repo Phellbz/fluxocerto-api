@@ -223,3 +223,36 @@ model BudgetItem {
   @@index([budgetId], map: "budget_items_budget_idx")
   @@map("budget_items")
 }
+
+model Product {
+  id              String    @id @default(uuid()) @map("id")
+  companyId       String    @map("company_id")
+
+  codigoIntegracao String?  @map("codigo_integracao")
+  codigoProduto    String?  @map("codigo_produto")
+  descricao        String?  @map("descricao")
+  ncm              String?  @map("ncm")
+  unidade          String?  @map("unidade")
+  familia          String?  @map("familia")
+  marca            String?  @map("marca")
+  modelo           String?  @map("modelo")
+  tipo             String?  @map("tipo")
+  localEstoque     String?  @map("local_estoque")
+
+  estoqueMinimo   Decimal?  @map("estoque_minimo") @db.Decimal(14, 2)
+  estoqueAtual    Decimal?  @map("estoque_atual") @db.Decimal(14, 2)
+  estoqueInicial  Decimal?  @map("estoque_inicial") @db.Decimal(14, 2)
+
+  precoCusto      Decimal?  @map("preco_custo") @db.Decimal(14, 2)
+  precoVenda      Decimal?  @map("preco_venda") @db.Decimal(14, 2)
+
+  pesoLiquido     Decimal?  @map("peso_liquido") @db.Decimal(14, 2)
+  pesoBruto       Decimal?  @map("peso_bruto") @db.Decimal(14, 2)
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([companyId], map: "products_company_idx")
+  @@index([codigoProduto], map: "products_codigo_idx")
+  @@map("products")
+}
