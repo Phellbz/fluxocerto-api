@@ -13,6 +13,7 @@ import { MovementsModule } from './movements/movements.module';
 import { BankAccountsModule } from './bank-accounts/bank-accounts.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { BudgetsModule } from './budgets/budgets.module';
 import { DepartmentsModule } from './departments/departments.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { DepartmentsModule } from './departments/departments.module';
     CategoriesModule,
     ContactsModule,
     DepartmentsModule,
+    BudgetsModule,
   ],
   controllers: [AppController, HealthController, MeController],
   providers: [AppService],
