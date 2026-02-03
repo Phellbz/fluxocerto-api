@@ -15,6 +15,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { DepartmentsModule } from './departments/departments.module';
     ContactsModule,
     DepartmentsModule,
     BudgetsModule,
+    ProductsModule,
   ],
   controllers: [AppController, HealthController, MeController],
   providers: [AppService],
