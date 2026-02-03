@@ -143,3 +143,83 @@ model Movement {
   @@index([departmentId])
   @@map("movements")
 }
+
+model Budget {
+  id                   String    @id @default(uuid()) @map("id")
+  companyId            String    @map("company_id")
+
+  budgetNumber         String?   @map("budget_number")
+  status               String?   @map("status")
+  stage                String?   @map("stage")
+
+  clientId             String?   @map("client_id")
+  clientName           String?   @map("client_name")
+  clientFullName       String?   @map("client_full_name")
+  clientDocument       String?   @map("client_document")
+  clientTags           String?   @map("client_tags")
+  contactName          String?   @map("contact_name")
+
+  totalServices        Decimal?  @map("total_services") @db.Decimal(14, 2)
+  totalMaterials       Decimal?  @map("total_materials") @db.Decimal(14, 2)
+  totalAmount          Decimal?  @map("total_amount") @db.Decimal(14, 2)
+
+  installmentCount     Int?      @map("installment_count")
+  paymentMethodLabel   String?   @map("payment_method_label")
+
+  bankAccountId        String?   @map("bank_account_id")
+  bankAccountName      String?   @map("bank_account_name")
+
+  categoryId           String?   @map("category_id")
+  categoryName         String?   @map("category_name")
+
+  departmentId         String?   @map("department_id")
+
+  advancePaymentStatus String?   @map("advance_payment_status")
+
+  expectedBillingDate  DateTime? @map("expected_billing_date") @db.Date
+  billedAt             DateTime? @map("billed_at")
+  billedBy             String?   @map("billed_by")
+
+  rpsDate              DateTime? @map("rps_date") @db.Date
+
+  clientOrderNumber    String?   @map("client_order_number")
+  sellerName           String?   @map("seller_name")
+  projectName          String?   @map("project_name")
+  contractNumber       String?   @map("contract_number")
+  constructionCode     String?   @map("construction_code")
+  artCode              String?   @map("art_code")
+  productRemittance    String?   @map("product_remittance")
+  observations         String?   @map("observations")
+
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  canceledAt           DateTime? @map("canceled_at")
+  createdBy            String?   @map("created_by")
+
+  items                BudgetItem[]
+
+  @@index([companyId], map: "budgets_company_idx")
+  @@index([budgetNumber], map: "budgets_number_idx")
+  @@map("budgets")
+}
+
+model BudgetItem {
+  id                  String   @id @default(uuid()) @map("id")
+  budgetId            String?  @map("budget_id")
+  itemType            String?  @map("item_type")
+  productId           String?  @map("product_id")
+  description         String?  @map("description")
+  detailedDescription String?  @map("detailed_description")
+
+  quantity        Decimal? @map("quantity") @db.Decimal(14, 2)
+  unitPrice       Decimal? @map("unit_price") @db.Decimal(14, 2)
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(14, 2)
+  lineTotal       Decimal? @map("line_total") @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  budget Budget? @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId], map: "budget_items_budget_idx")
+  @@map("budget_items")
+}
