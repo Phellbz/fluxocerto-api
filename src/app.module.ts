@@ -12,7 +12,7 @@ import { MovementsModule } from './movements/movements.module';
 
 import { BankAccountsModule } from './bank-accounts/bank-accounts.module';
 import { CategoriesModule } from './categories/categories.module';
-import { ContactsController } from './contacts/contacts.controller';
+import { ContactsModule } from './contacts/contacts.module';
 import { DepartmentsController } from './departments/departments.controller';
 
 @Module({
@@ -22,12 +22,12 @@ import { DepartmentsController } from './departments/departments.controller';
     MovementsModule,
     BankAccountsModule,
     CategoriesModule,
+    ContactsModule,
   ],
   controllers: [
     AppController,
     HealthController,
     MeController,
-    ContactsController,
     DepartmentsController,
   ],
   providers: [AppService],

@@ -3,49 +3,53 @@ import {
   Controller,
   Get,
   Headers,
+  Param,
+  Patch,
   Post,
-  BadRequestException,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma/prisma.service';
-import { getCompanyIdFromAuthHeader } from '../auth/jwt-company';
+import { getCompanyIdFromRequest } from '../auth/company-id';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ContactsService } from './contacts.service';
+import { CreateContactDto } from './dto/create-contact.dto';
+import { UpdateContactDto } from './dto/update-contact.dto';
 
 @Controller('contacts')
+@UseGuards(JwtAuthGuard)
 export class ContactsController {
-  constructor(
-    private readonly jwt: JwtService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly contactsService: ContactsService) {}
 
   @Get()
-  async list(@Headers('authorization') authorization?: string) {
-    const { companyId } = await getCompanyIdFromAuthHeader(
-      this.jwt,
-      authorization,
-    );
-    return this.prisma.contact.findMany({
-      where: { companyId },
-      orderBy: { createdAt: 'desc' },
-    });
+  async list(
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId?: string,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.contactsService.list(companyId);
   }
 
   @Post()
   async create(
-    @Headers('authorization') authorization: string | undefined,
-    @Body() body: any,
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Body() dto: CreateContactDto,
   ) {
-    const { companyId } = await getCompanyIdFromAuthHeader(
-      this.jwt,
-      authorization,
-    );
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
 
-    const name = (body?.name || '').trim();
-    if (!name) throw new BadRequestException('name is required');
+    console.log('[contacts] POST /contacts body received', { companyId, dto });
 
-    const tradeName = (body?.tradeName != null ? String(body.tradeName).trim() : '') || '';
+    return this.contactsService.create(companyId, req.user ?? {}, dto);
+  }
 
-    return this.prisma.contact.create({
-      data: { companyId, name, tradeName },
-    });
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Body() dto: UpdateContactDto,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.contactsService.update(companyId, id, dto);
   }
 }
