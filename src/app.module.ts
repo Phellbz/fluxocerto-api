@@ -13,7 +13,7 @@ import { MovementsModule } from './movements/movements.module';
 import { BankAccountsModule } from './bank-accounts/bank-accounts.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ContactsModule } from './contacts/contacts.module';
-import { DepartmentsController } from './departments/departments.controller';
+import { DepartmentsModule } from './departments/departments.module';
 
 @Module({
   imports: [
@@ -23,13 +23,9 @@ import { DepartmentsController } from './departments/departments.controller';
     BankAccountsModule,
     CategoriesModule,
     ContactsModule,
+    DepartmentsModule,
   ],
-  controllers: [
-    AppController,
-    HealthController,
-    MeController,
-    DepartmentsController,
-  ],
+  controllers: [AppController, HealthController, MeController],
   providers: [AppService],
 })
 export class AppModule {}

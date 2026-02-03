@@ -3,47 +3,57 @@ import {
   Controller,
   Get,
   Headers,
+  Param,
+  Patch,
   Post,
-  BadRequestException,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma/prisma.service';
-import { getCompanyIdFromAuthHeader } from '../auth/jwt-company';
+import { getCompanyIdFromRequest } from '../auth/company-id';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { DepartmentsService } from './departments.service';
+import { CreateDepartmentDto } from './dto/create-department.dto';
+import { UpdateDepartmentDto } from './dto/update-department.dto';
 
 @Controller('departments')
+@UseGuards(JwtAuthGuard)
 export class DepartmentsController {
-  constructor(
-    private readonly jwt: JwtService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly departmentsService: DepartmentsService) {}
 
   @Get()
-  async list(@Headers('authorization') authorization?: string) {
-    const { companyId } = await getCompanyIdFromAuthHeader(
-      this.jwt,
-      authorization,
-    );
-    return this.prisma.department.findMany({
-      where: { companyId },
-      orderBy: { createdAt: 'desc' },
-    });
+  async list(
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId?: string,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.departmentsService.list(companyId);
   }
 
   @Post()
   async create(
-    @Headers('authorization') authorization: string | undefined,
-    @Body() body: any,
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Body() dto: CreateDepartmentDto,
   ) {
-    const { companyId } = await getCompanyIdFromAuthHeader(
-      this.jwt,
-      authorization,
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+
+    console.log('[departments] POST body received', { companyId, dto });
+
+    return this.departmentsService.create(
+      companyId,
+      (req.user ?? {}) as Record<string, unknown>,
+      dto,
     );
+  }
 
-    const name = (body?.name || '').trim();
-    if (!name) throw new BadRequestException('name is required');
-
-    return this.prisma.department.create({
-      data: { companyId, name },
-    });
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Body() dto: UpdateDepartmentDto,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.departmentsService.update(companyId, id, dto);
   }
 }
