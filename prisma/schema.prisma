@@ -45,6 +45,24 @@ enum ContactType {
   both     @map("both")
 }
 
+enum FinancialAccountKind {
+  payable   @map("payable")
+  receivable @map("receivable")
+}
+
+enum FinancialAccountStatus {
+  open     @map("open")
+  partial  @map("partial")
+  paid     @map("paid")
+  canceled @map("canceled")
+}
+
+enum InstallmentStatus {
+  open    @map("open")
+  partial @map("partial")
+  paid    @map("paid")
+}
+
 model BankAccount {
   id                 String          @id @default(uuid()) @map("id")
   companyId          String          @map("company_id")
@@ -59,8 +77,10 @@ model BankAccount {
   createdAt          DateTime        @default(now()) @map("created_at")
   updatedAt          DateTime        @updatedAt @map("updated_at")
 
-  company   Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  movements Movement[]
+  company                Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  movements              Movement[]
+  financialAccounts      FinancialAccount[]
+  financialAccountPayments FinancialAccountPayment[]
 
   @@unique([companyId, name], map: "bank_accounts_company_name_unique")
   @@index([companyId])
@@ -80,8 +100,9 @@ model Category {
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
 
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  movements Movement[]
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  movements         Movement[]
+  financialAccounts FinancialAccount[]
 
   @@unique([companyId, name], map: "categories_company_name_unique")
   @@index([companyId])
@@ -109,8 +130,9 @@ model Contact {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  movements Movement[]
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  movements         Movement[]
+  financialAccounts FinancialAccount[]
 
   @@unique([companyId, document], map: "contacts_company_document_unique")
   @@index([companyId])
@@ -126,12 +148,97 @@ model Department {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  movements Movement[]
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  movements         Movement[]
+  financialAccounts FinancialAccount[]
 
   @@unique([companyId, name], map: "departments_company_name_unique")
   @@index([companyId])
   @@map("departments")
+}
+
+model FinancialAccount {
+  id               String                 @id @default(uuid()) @map("id")
+  companyId        String                 @map("company_id")
+  kind             FinancialAccountKind   @map("kind")
+  status           FinancialAccountStatus @map("status")
+  contactId        String                 @map("contact_id")
+  categoryId       String                 @map("category_id")
+  departmentId     String                 @map("department_id")
+  bankAccountId    String                 @map("bank_account_id")
+  budgetId         String?                @map("budget_id")
+  totalAmount      Decimal                @map("total_amount") @db.Decimal(14, 2)
+  description     String                 @map("description")
+  invoiceNumber    String?                @map("invoice_number")
+  issueDate        DateTime               @map("issue_date") @db.Date
+  isSettled        Boolean                @default(false) @map("is_settled")
+  observations     String?                @map("observations")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  createdByUserId  String                 @map("created_by_user_id")
+  updatedByUserId  String                 @map("updated_by_user_id")
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  contact    Contact     @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  department Department  @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  installments Installment[]
+  payments   FinancialAccountPayment[]
+
+  @@index([companyId])
+  @@map("financial_accounts")
+}
+
+model Installment {
+  id                String            @id @default(uuid()) @map("id")
+  companyId         String            @map("company_id")
+  financialAccountId String           @map("financial_account_id")
+  installmentNumber Int               @map("installment_number")
+  dueDate           DateTime          @map("due_date") @db.Date
+  amount            Decimal           @map("amount") @db.Decimal(14, 2)
+  paidTotal         Decimal           @default(0) @map("paid_total") @db.Decimal(14, 2)
+  status            InstallmentStatus @default(open) @map("status")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  createdByUserId   String           @map("created_by_user_id")
+  updatedByUserId   String           @map("updated_by_user_id")
+
+  company          Company               @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount      @relation(fields: [financialAccountId], references: [id], onDelete: Cascade)
+  payments         FinancialAccountPayment[]
+
+  @@index([companyId])
+  @@index([financialAccountId])
+  @@map("installments")
+}
+
+model FinancialAccountPayment {
+  id                 String           @id @default(uuid()) @map("id")
+  companyId          String           @map("company_id")
+  financialAccountId String           @map("financial_account_id")
+  installmentId      String?          @map("installment_id")
+  bankAccountId      String           @map("bank_account_id")
+  paymentDate        DateTime         @map("payment_date") @db.Date
+  paidAmount         Decimal          @map("paid_amount") @db.Decimal(14, 2)
+  interest           Decimal          @default(0) @map("interest") @db.Decimal(14, 2)
+  discount           Decimal          @default(0) @map("discount") @db.Decimal(14, 2)
+  notes              String?          @map("notes")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  createdByUserId    String           @map("created_by_user_id")
+  updatedByUserId    String           @map("updated_by_user_id")
+
+  company          Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  financialAccount FinancialAccount @relation(fields: [financialAccountId], references: [id], onDelete: Restrict)
+  installment      Installment?     @relation(fields: [installmentId], references: [id], onDelete: SetNull)
+  bankAccount      BankAccount      @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  movement         Movement?
+
+  @@index([companyId])
+  @@index([financialAccountId])
+  @@index([installmentId])
+  @@map("financial_account_payments")
 }
 
 model Movement {
@@ -148,11 +255,13 @@ model Movement {
   categoryId    String?   @map("category_id")
   contactId     String?   @map("contact_id")
   departmentId  String?   @map("department_id")
+  paymentId     String?   @unique @map("payment_id")
 
-  bankAccount  BankAccount? @relation(fields: [bankAccountId], references: [id])
-  category     Category?    @relation(fields: [categoryId], references: [id])
-  contact      Contact?     @relation(fields: [contactId], references: [id])
-  department   Department?  @relation(fields: [departmentId], references: [id])
+  bankAccount  BankAccount?             @relation(fields: [bankAccountId], references: [id])
+  category     Category?                @relation(fields: [categoryId], references: [id])
+  contact      Contact?                 @relation(fields: [contactId], references: [id])
+  department   Department?              @relation(fields: [departmentId], references: [id])
+  payment      FinancialAccountPayment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   // Campos opcionais do seu form (deixe simples por agora)
   project       String?         @map("project")
@@ -312,13 +421,16 @@ model Company {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  members      CompanyMember[]
-  config       CompanyConfig?
-  bankAccounts BankAccount[]
-  contacts     Contact[]
-  categories   Category[]
-  departments  Department[]
-  products     Product[]
+  members           CompanyMember[]
+  config            CompanyConfig?
+  bankAccounts      BankAccount[]
+  contacts          Contact[]
+  categories        Category[]
+  departments       Department[]
+  products          Product[]
+  financialAccounts FinancialAccount[]
+  installments      Installment[]
+  financialAccountPayments FinancialAccountPayment[]
 
   @@map("companies")
 }
