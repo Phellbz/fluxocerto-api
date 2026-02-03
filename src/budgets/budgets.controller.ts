@@ -60,15 +60,13 @@ export class BudgetsController {
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Req() req: { user?: { company_id?: string; companyId?: string; sub?: string; id?: string } },
     @Headers('x-company-id') xCompanyId: string | undefined,
     @Body() dto: UpdateBudgetDto,
   ) {
     const companyId = getCompanyIdFromRequest(req, xCompanyId);
-
-    console.log('[budgets] PATCH', { companyId, id });
-
-    return this.budgetsService.update(companyId, id, dto);
+    const userId = req.user?.sub ?? req.user?.id ?? null;
+    return this.budgetsService.update(companyId, id, dto, userId);
   }
 
   @Delete(':id')

@@ -63,6 +63,11 @@ export class CreateBudgetDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  discountValue?: number | string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   installmentCount?: number | null;
 
   @IsOptional()
