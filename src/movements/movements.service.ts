@@ -76,6 +76,13 @@ export class MovementsService {
         bankAccountId: dto.bankAccountId ?? null,
         contactId: dto.contactId ?? null,
         departmentId: dto.departmentId ?? null,
+        project: (dto.project ?? '').trim() || null,
+        documentType: (dto.documentType ?? '').trim() || null,
+        documentNumber: (dto.documentNumber ?? '').trim() || null,
+        observations: (dto.observations ?? '').trim() || null,
+        status: (dto.status ?? '').trim() || null,
+        source: (dto.source ?? '').trim() || null,
+        isReconciled: dto.isReconciled ?? null,
       },
     });
   }

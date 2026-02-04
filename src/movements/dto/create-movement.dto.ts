@@ -8,6 +8,7 @@ import {
   IsDateString,
   IsString,
   MaxLength,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateMovementDto {
@@ -47,4 +48,36 @@ export class CreateMovementDto {
   @IsOptional()
   @IsUUID('4', { message: 'departmentId deve ser um UUID válido' })
   departmentId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  project?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  documentType?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  documentNumber?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  observations?: string | null;
+
+  @IsOptional()
+  @IsString()
+  status?: string | null;
+
+  @IsOptional()
+  @IsString()
+  source?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  isReconciled?: boolean | null;
 }
