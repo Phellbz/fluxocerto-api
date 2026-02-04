@@ -16,6 +16,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { ProductsModule } from './products/products.module';
+import { FinancialAccountPaymentsModule } from './financial-account-payments/financial-account-payments.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ProductsModule } from './products/products.module';
     DepartmentsModule,
     BudgetsModule,
     ProductsModule,
+    FinancialAccountPaymentsModule,
   ],
   controllers: [AppController, HealthController, MeController],
   providers: [AppService],
