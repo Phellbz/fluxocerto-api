@@ -63,6 +63,7 @@ export class InstallmentsService {
           select: {
             id: true,
             kind: true,
+            description: true,
             contactId: true,
             categoryId: true,
             departmentId: true,
