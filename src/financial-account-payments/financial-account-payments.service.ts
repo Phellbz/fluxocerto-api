@@ -7,7 +7,6 @@ import {
   FinancialAccountStatus,
   InstallmentStatus,
   MovementDirection,
-  Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateFinancialAccountPaymentDto } from './dto/create-payment.dto';
