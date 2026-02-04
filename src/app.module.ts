@@ -19,6 +19,7 @@ import { ProductsModule } from './products/products.module';
 import { FinancialAccountPaymentsModule } from './financial-account-payments/financial-account-payments.module';
 import { FinancialAccountsModule } from './financial-accounts/financial-accounts.module';
 import { InstallmentsModule } from './installments/installments.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { InstallmentsModule } from './installments/installments.module';
     FinancialAccountPaymentsModule,
     FinancialAccountsModule,
     InstallmentsModule,
+    DashboardModule,
   ],
   controllers: [AppController, HealthController, MeController],
   providers: [AppService],
