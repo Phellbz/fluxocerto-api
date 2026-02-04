@@ -3,9 +3,22 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { MovementStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ListMovementsQueryDto } from './dto/list-movements-query.dto';
 import { CreateMovementDto } from './dto/create-movement.dto';
+
+/** Normaliza string do frontend ("realized", "REALIZED", etc.) para enum ou null se inválido. */
+function normalizeMovementStatus(
+  value: string | MovementStatus | null | undefined,
+): MovementStatus | null {
+  if (value == null || value === '') return null;
+  const upper = typeof value === 'string' ? value.trim().toUpperCase() : value;
+  if (upper === MovementStatus.REALIZED) return MovementStatus.REALIZED;
+  if (upper === MovementStatus.PENDING) return MovementStatus.PENDING;
+  if (upper === MovementStatus.CANCELED) return MovementStatus.CANCELED;
+  return null;
+}
 
 @Injectable()
 export class MovementsService {
@@ -80,7 +93,7 @@ export class MovementsService {
         documentType: (dto.documentType ?? '').trim() || null,
         documentNumber: (dto.documentNumber ?? '').trim() || null,
         observations: (dto.observations ?? '').trim() || null,
-        status: (dto.status ?? '').trim() || null,
+        status: normalizeMovementStatus(dto.status),
         source: (dto.source ?? '').trim() || null,
         isReconciled: dto.isReconciled ?? null,
       },

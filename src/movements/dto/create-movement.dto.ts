@@ -1,3 +1,4 @@
+import { MovementStatus } from '@prisma/client';
 import {
   IsNotEmpty,
   IsNumber,
@@ -69,9 +70,10 @@ export class CreateMovementDto {
   @MaxLength(2000)
   observations?: string | null;
 
+  /** Aceita "realized" | "REALIZED" etc.; normalizado no service para MovementStatus */
   @IsOptional()
   @IsString()
-  status?: string | null;
+  status?: MovementStatus | string | null;
 
   @IsOptional()
   @IsString()
