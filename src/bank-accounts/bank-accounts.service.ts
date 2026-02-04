@@ -64,6 +64,78 @@ export class BankAccountsService {
     return rows.map(toBankAccountResponse);
   }
 
+  /**
+   * Overview: contas ativas com saldo atual (opening_balance + net movements).
+   * currentBalance em reais (2 casas); movementsInCents e movementsOutCents por conta.
+   */
+  async overview(companyId: string) {
+    const accounts = await this.prisma.bankAccount.findMany({
+      where: { companyId, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (accounts.length === 0) return [];
+
+    const ids = accounts.map((a) => a.id);
+
+    const [inGroups, outGroups] = await Promise.all([
+      this.prisma.movement.groupBy({
+        by: ['bankAccountId'],
+        where: {
+          companyId,
+          bankAccountId: { in: ids },
+          direction: 'in',
+        },
+        _sum: { amountCents: true },
+      }),
+      this.prisma.movement.groupBy({
+        by: ['bankAccountId'],
+        where: {
+          companyId,
+          bankAccountId: { in: ids },
+          direction: 'out',
+        },
+        _sum: { amountCents: true },
+      }),
+    ]);
+
+    const inByAccount = new Map<string, number>();
+    for (const g of inGroups) {
+      if (g.bankAccountId != null)
+        inByAccount.set(g.bankAccountId, g._sum.amountCents ?? 0);
+    }
+    const outByAccount = new Map<string, number>();
+    for (const g of outGroups) {
+      if (g.bankAccountId != null)
+        outByAccount.set(g.bankAccountId, g._sum.amountCents ?? 0);
+    }
+
+    return accounts.map((row) => {
+      const movementsInCents = inByAccount.get(row.id) ?? 0;
+      const movementsOutCents = outByAccount.get(row.id) ?? 0;
+      const opening =
+        row.openingBalance != null ? Number(row.openingBalance) : 0;
+      const netReais = (movementsInCents - movementsOutCents) / 100;
+      const currentBalance = Math.round((opening + netReais) * 100) / 100;
+
+      return {
+        id: row.id,
+        name: row.name,
+        institution: row.institution,
+        accountType: row.accountType,
+        agency: row.agency,
+        accountNumber: row.accountNumber,
+        openingBalance:
+          row.openingBalance != null ? Number(row.openingBalance) : null,
+        openingBalanceDate: row.openingBalanceDate
+          ? row.openingBalanceDate.toISOString().slice(0, 10)
+          : null,
+        currentBalance,
+        movementsInCents,
+        movementsOutCents,
+      };
+    });
+  }
+
   async getById(companyId: string, id: string) {
     const row = await this.prisma.bankAccount.findFirst({
       where: { id, companyId },

@@ -56,6 +56,15 @@ export class BankAccountsController {
     return this.bankAccountsService.list(companyId);
   }
 
+  @Get('overview')
+  async overview(
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId?: string,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.bankAccountsService.overview(companyId);
+  }
+
   @Get(':id')
   async getById(
     @Param('id') id: string,
