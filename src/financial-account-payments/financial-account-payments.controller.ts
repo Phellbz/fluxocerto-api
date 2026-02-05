@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   Headers,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -17,6 +19,19 @@ export class FinancialAccountPaymentsController {
   constructor(
     private readonly paymentsService: FinancialAccountPaymentsService,
   ) {}
+
+  @Get()
+  async list(
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Query('financialAccountId') financialAccountId?: string,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.paymentsService.list(
+      companyId,
+      financialAccountId ?? undefined,
+    );
+  }
 
   @Post()
   async create(

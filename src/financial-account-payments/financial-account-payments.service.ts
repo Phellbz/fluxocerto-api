@@ -7,11 +7,41 @@ import {
   FinancialAccountStatus,
   InstallmentStatus,
   MovementDirection,
+  MovementStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateFinancialAccountPaymentDto } from './dto/create-payment.dto';
 
 const USER_PLACEHOLDER = 'system';
+
+/** Serializa payment para resposta GET/POST (Decimal → number, Date → ISO). */
+function toPaymentResponse(
+  row: {
+    id: string;
+    financialAccountId: string;
+    installmentId: string | null;
+    bankAccountId: string;
+    paymentDate: Date;
+    paidAmount: unknown;
+    interest: unknown;
+    discount: unknown;
+    notes: string | null;
+    createdAt: Date;
+  },
+) {
+  return {
+    id: row.id,
+    financialAccountId: row.financialAccountId,
+    installmentId: row.installmentId,
+    bankAccountId: row.bankAccountId,
+    paymentDate: row.paymentDate.toISOString().slice(0, 10),
+    paidAmount: Number(row.paidAmount),
+    interest: Number(row.interest),
+    discount: Number(row.discount),
+    notes: row.notes,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
 
 function toDateOnly(value: string): Date {
   const d = new Date(value);
@@ -24,6 +54,21 @@ function toDateOnly(value: string): Date {
 @Injectable()
 export class FinancialAccountPaymentsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Lista payments por companyId; opcionalmente filtra por financialAccountId. */
+  async list(companyId: string, financialAccountId?: string | null) {
+    const where: { companyId: string; financialAccountId?: string } = {
+      companyId,
+    };
+    if (financialAccountId != null && financialAccountId !== '') {
+      where.financialAccountId = financialAccountId;
+    }
+    const rows = await this.prisma.financialAccountPayment.findMany({
+      where,
+      orderBy: { paymentDate: 'desc', createdAt: 'desc' },
+    });
+    return rows.map(toPaymentResponse);
+  }
 
   async createPayment(
     companyId: string,
@@ -81,15 +126,27 @@ export class FinancialAccountPaymentsService {
         );
       }
 
-      let remaining = paidAmount;
-      const installmentsToUpdate =
-        dto.installmentId != null
-          ? account.installments.filter((i) => i.id === dto.installmentId)
-          : account.installments.filter(
-              (i) => Number(i.paidTotal) < Number(i.amount),
+      // FIFO: open/partial por due_date ASC; se installmentId veio, essa parcela primeiro
+      const openOrPartial = account.installments.filter(
+        (i) => Number(i.paidTotal) < Number(i.amount),
+      );
+      let ordered: typeof account.installments =
+        openOrPartial.length === 0
+          ? []
+          : [...openOrPartial].sort(
+              (a, b) =>
+                new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
             );
+      if (dto.installmentId != null && ordered.length > 0) {
+        const idx = ordered.findIndex((i) => i.id === dto.installmentId);
+        if (idx > 0) {
+          const [target] = ordered.splice(idx, 1);
+          ordered = [target, ...ordered];
+        }
+      }
 
-      for (const inst of installmentsToUpdate) {
+      let remaining = paidAmount;
+      for (const inst of ordered) {
         if (remaining <= 0) break;
         const amount = Number(inst.amount);
         const paidTotal = Number(inst.paidTotal);
@@ -143,32 +200,52 @@ export class FinancialAccountPaymentsService {
       const movementAmount = paidAmount + interest - discount;
       const amountCents = Math.round(movementAmount * 100);
       const direction: MovementDirection =
-        account.kind === 'receivable' ? MovementDirection.in : MovementDirection.out;
+        account.kind === 'receivable'
+          ? MovementDirection.in
+          : MovementDirection.out;
+      const movementDesc =
+        (account.kind === 'receivable' ? 'Recebimento: ' : 'Pagamento: ') +
+        (account.description || 'Conta financeira');
 
       await tx.movement.create({
         data: {
           companyId,
-          bankAccountId: dto.bankAccountId,
-          paymentId: payment.id,
-          occurredAt: paymentDate,
-          description: `Payment ${payment.id}`,
+          description: movementDesc,
           amountCents,
           direction,
+          occurredAt: paymentDate,
+          bankAccountId: dto.bankAccountId,
+          paymentId: payment.id,
           source: 'system',
-          isReconciled: false,
+          status: MovementStatus.REALIZED,
+          isReconciled: true,
           categoryId: account.categoryId,
           contactId: account.contactId,
           departmentId: account.departmentId,
         },
       });
 
-      return tx.financialAccountPayment.findUniqueOrThrow({
+      const created = await tx.financialAccountPayment.findUniqueOrThrow({
         where: { id: payment.id },
         include: {
           financialAccount: { select: { status: true, isSettled: true } },
           installment: { select: { id: true, paidTotal: true, status: true } },
         },
       });
+      return {
+        ...toPaymentResponse(created),
+        financialAccount: {
+          status: created.financialAccount.status,
+          isSettled: created.financialAccount.isSettled,
+        },
+        installment: created.installment
+          ? {
+              id: created.installment.id,
+              paidTotal: Number(created.installment.paidTotal),
+              status: created.installment.status,
+            }
+          : null,
+      };
     });
   }
 }
