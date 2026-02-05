@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  Param,
   Post,
   Query,
   Req,
@@ -28,6 +29,16 @@ export class FinancialAccountsController {
   ) {
     const companyId = getCompanyIdFromRequest(req, xCompanyId);
     return this.financialAccountsService.list(companyId, kind ?? undefined);
+  }
+
+  @Get(':id')
+  async getOne(
+    @Param('id') id: string,
+    @Req() req: { user?: { company_id?: string; companyId?: string } },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    return this.financialAccountsService.getById(companyId, id);
   }
 
   @Post()

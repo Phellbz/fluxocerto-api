@@ -1,9 +1,35 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { FinancialAccountKind } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { FinancialAccount, FinancialAccountKind } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 
 const USER_PLACEHOLDER = 'system';
+
+/** Serializa FinancialAccount para JSON (Decimal → number, Date → ISO). */
+function toFinancialAccountResponse(row: FinancialAccount) {
+  return {
+    id: row.id,
+    kind: row.kind,
+    contactId: row.contactId,
+    categoryId: row.categoryId,
+    departmentId: row.departmentId,
+    bankAccountId: row.bankAccountId,
+    budgetId: row.budgetId,
+    totalAmount: Number(row.totalAmount),
+    description: row.description,
+    invoiceNumber: row.invoiceNumber,
+    issueDate: row.issueDate.toISOString().slice(0, 10),
+    status: row.status,
+    observations: row.observations,
+    isSettled: row.isSettled,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 function toDateOnly(value: string): Date {
   const d = new Date(value);
@@ -34,6 +60,17 @@ export class FinancialAccountsService {
       orderBy: { createdAt: 'desc' },
       include: { installments: { orderBy: { installmentNumber: 'asc' } } },
     });
+  }
+
+  /** Um único financial account por id, filtrado por companyId. Sem installments. */
+  async getById(companyId: string, id: string) {
+    const row = await this.prisma.financialAccount.findFirst({
+      where: { id, companyId },
+    });
+    if (!row) {
+      throw new NotFoundException('Financial account not found');
+    }
+    return toFinancialAccountResponse(row);
   }
 
   async create(
