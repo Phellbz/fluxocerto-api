@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
@@ -11,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { getCompanyIdFromRequest } from '../auth/company-id';
+import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BankAccountsService } from './bank-accounts.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
@@ -43,66 +43,47 @@ import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
  *    → Garantir que NÃO zera: openingBalance e openingBalanceDate devem continuar com os valores anteriores.
  */
 @Controller('bank-accounts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyGuard)
 export class BankAccountsController {
   constructor(private readonly bankAccountsService: BankAccountsService) {}
 
   @Get()
-  async list(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId?: string,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async list(@Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.bankAccountsService.list(companyId);
   }
 
   @Get('overview')
-  async overview(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId?: string,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async overview(@Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.bankAccountsService.overview(companyId);
   }
 
   @Get(':id')
-  async getById(
-    @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId?: string,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async getById(@Param('id') id: string, @Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.bankAccountsService.getById(companyId, id);
   }
 
   @Post()
-  async create(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-    @Body() dto: CreateBankAccountDto,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async create(@Req() req: any, @Body() dto: CreateBankAccountDto) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.bankAccountsService.create(companyId, dto);
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Req() req: any,
     @Body() dto: UpdateBankAccountDto,
   ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    const companyId = getCompanyIdFromRequest(req);
     return this.bankAccountsService.update(companyId, id, dto);
   }
 
   @Delete(':id')
-  async remove(
-    @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.bankAccountsService.remove(companyId, id);
   }
 }

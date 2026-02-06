@@ -2,36 +2,29 @@ import {
   BadRequestException,
   Controller,
   Get,
-  Headers,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { getCompanyIdFromRequest } from '../auth/company-id';
+import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DashboardService } from './dashboard.service';
 
 @Controller('dashboard')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyGuard)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('cash-today')
-  async cashToday(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async cashToday(@Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.dashboardService.getCashToday(companyId);
   }
 
   @Get('cash-flow')
-  async cashFlow(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-    @Query('days') daysParam?: string,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async cashFlow(@Req() req: any, @Query('days') daysParam?: string) {
+    const companyId = getCompanyIdFromRequest(req);
     const days = Math.min(
       365,
       Math.max(1, parseInt(daysParam ?? '30', 10) || 30),

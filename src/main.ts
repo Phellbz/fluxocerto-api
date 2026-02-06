@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 /** Lista de origens permitidas (CSV em FRONTEND_ORIGINS). Vazio = modo permissivo (qualquer origem). */
@@ -32,6 +33,7 @@ function corsOriginCallback(
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -6,6 +6,7 @@ import { HealthController } from './health.controller';
 
 import { AuthModule } from './auth/auth.module';
 import { MeController } from './me/me.controller';
+import { AdminModule } from './admin/admin.module';
 
 import { PrismaModule } from '../prisma/prisma.module';
 import { MovementsModule } from './movements/movements.module';
@@ -24,6 +25,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 @Module({
   imports: [
     AuthModule,
+    AdminModule,
     PrismaModule,
     MovementsModule,
     BankAccountsModule,

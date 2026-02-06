@@ -402,18 +402,40 @@ model Product {
 // --- Base estrutural multi-empresa (Etapa 01). Autenticação atual NÃO usa estas tabelas. ---
 
 model AppUser {
-  id           String   @id @default(uuid()) @map("id")
-  email        String   @unique @map("email")
-  name         String   @map("name")
-  passwordHash String   @map("password_hash")
-  avatarUrl    String?  @map("avatar_url")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid()) @map("id")
+  email             String   @unique @map("email")
+  name              String   @map("name")
+  passwordHash      String   @map("password_hash")
+  avatarUrl         String?  @map("avatar_url")
+  isActive          Boolean  @default(true) @map("is_active")
+  mustChangePassword Boolean @default(false) @map("must_change_password")
+  isSystemAdmin     Boolean  @default(false) @map("is_system_admin")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  members CompanyMember[]
+  members         CompanyMember[]
+  refreshSessions RefreshSession[]
 
   @@map("app_users")
+}
+
+model RefreshSession {
+  id           String    @id @default(uuid()) @map("id")
+  userId       String    @map("user_id")
+  tokenHash    String    @unique @map("token_hash")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  replacedById String?   @map("replaced_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  userAgent    String?   @map("user_agent")
+  ip           String?   @map("ip")
+
+  user        AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy  RefreshSession?  @relation("ReplacedBy", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces    RefreshSession[] @relation("ReplacedBy")
+
+  @@index([userId, revokedAt])
+  @@map("refresh_sessions")
 }
 
 model Company {

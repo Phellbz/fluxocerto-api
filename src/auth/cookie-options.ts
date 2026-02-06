@@ -1,11 +1,14 @@
+/** 30 dias em segundos para Max-Age do refresh token */
+export const REFRESH_COOKIE_MAX_AGE_SEC = 30 * 24 * 60 * 60;
+
 /**
- * Opções para cookies de auth (ex.: refresh token).
- * Use com res.cookie(name, value, COOKIE_OPTIONS) em endpoints que setam cookie.
- * CORS está configurado com credentials: true no main.ts para permitir envio de cookies.
+ * Opções para cookie refresh_token (HttpOnly, Secure em prod, SameSite=Lax).
+ * CORS com credentials: true no main.ts para envio de cookies.
  */
-export const COOKIE_OPTIONS = {
+export const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias (ajuste conforme refresh token)
+  path: '/' as const,
+  maxAge: REFRESH_COOKIE_MAX_AGE_SEC,
 };

@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   Param,
   Post,
   Query,
@@ -10,46 +9,33 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { getCompanyIdFromRequest } from '../auth/company-id';
+import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FinancialAccountsService } from './financial-accounts.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
 
 @Controller('financial-accounts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyGuard)
 export class FinancialAccountsController {
   constructor(
     private readonly financialAccountsService: FinancialAccountsService,
   ) {}
 
   @Get()
-  async list(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-    @Query('kind') kind?: 'payable' | 'receivable',
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async list(@Req() req: any, @Query('kind') kind?: 'payable' | 'receivable') {
+    const companyId = getCompanyIdFromRequest(req);
     return this.financialAccountsService.list(companyId, kind ?? undefined);
   }
 
   @Get(':id')
-  async getOne(
-    @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async getOne(@Param('id') id: string, @Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.financialAccountsService.getById(companyId, id);
   }
 
   @Post()
-  async create(
-    @Req() req: {
-      user?: { sub?: string; id?: string; company_id?: string; companyId?: string };
-    },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-    @Body() dto: CreateFinancialAccountDto,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async create(@Req() req: any, @Body() dto: CreateFinancialAccountDto) {
+    const companyId = getCompanyIdFromRequest(req);
     const userId = req.user?.sub ?? req.user?.id ?? null;
     return this.financialAccountsService.create(companyId, userId, dto);
   }

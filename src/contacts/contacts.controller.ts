@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
@@ -10,46 +9,36 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { getCompanyIdFromRequest } from '../auth/company-id';
+import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ContactsService } from './contacts.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
 
 @Controller('contacts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyGuard)
 export class ContactsController {
   constructor(private readonly contactsService: ContactsService) {}
 
   @Get()
-  async list(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId?: string,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async list(@Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.contactsService.list(companyId);
   }
 
   @Post()
-  async create(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-    @Body() dto: CreateContactDto,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
-
-    console.log('[contacts] POST /contacts body received', { companyId, dto });
-
+  async create(@Req() req: any, @Body() dto: CreateContactDto) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.contactsService.create(companyId, req.user ?? {}, dto);
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Req() req: any,
     @Body() dto: UpdateContactDto,
   ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    const companyId = getCompanyIdFromRequest(req);
     return this.contactsService.update(companyId, id, dto);
   }
 }

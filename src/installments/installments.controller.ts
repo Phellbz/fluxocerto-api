@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   Param,
   Patch,
   Query,
@@ -10,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { getCompanyIdFromRequest } from '../auth/company-id';
+import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   InstallmentsService,
@@ -18,14 +18,13 @@ import {
 import { SettleInstallmentDto } from './dto/settle-installment.dto';
 
 @Controller('installments')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyGuard)
 export class InstallmentsController {
   constructor(private readonly installmentsService: InstallmentsService) {}
 
   @Get()
   async list(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Req() req: any,
     @Query('status') status?: 'open' | 'partial' | 'paid',
     @Query('from') from?: string,
     @Query('to') to?: string,
@@ -34,7 +33,7 @@ export class InstallmentsController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    const companyId = getCompanyIdFromRequest(req);
     const query: ListInstallmentsQuery = {
       status,
       from,
@@ -48,15 +47,8 @@ export class InstallmentsController {
   }
 
   @Patch(':id')
-  async settle(
-    @Param('id') id: string,
-    @Req() req: {
-      user?: { sub?: string; id?: string; company_id?: string; companyId?: string };
-    },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-    @Body() dto: SettleInstallmentDto,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async settle(@Param('id') id: string, @Req() req: any, @Body() dto: SettleInstallmentDto) {
+    const companyId = getCompanyIdFromRequest(req);
     const userId = req.user?.sub ?? req.user?.id ?? null;
     return this.installmentsService.settle(companyId, id, dto, userId);
   }

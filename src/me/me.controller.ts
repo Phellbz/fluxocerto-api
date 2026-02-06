@@ -1,24 +1,26 @@
-import {
-  Controller,
-  Get,
-  Headers,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('me')
+@UseGuards(JwtAuthGuard)
 export class MeController {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   @Get('companies')
-  async companies(@Headers('authorization') authorization?: string) {
-    const token = (authorization || '').replace('Bearer ', '').trim();
-    if (!token) throw new UnauthorizedException('Missing token');
+  async companies(@Req() req: { user?: { sub?: string } }) {
+    const userId = req.user?.sub;
+    if (!userId) return [];
 
-    const payload = await this.jwt.verifyAsync(token, {
-      secret: process.env.JWT_SECRET || 'dev-secret-change-me',
+    const members = await this.prisma.companyMember.findMany({
+      where: { userId, isActive: true },
+      include: { company: true },
     });
-
-    return [{ id: payload.company_id, name: 'Minha Empresa' }];
+    return members.map((m) => ({
+      id: m.company.id,
+      name: m.company.name,
+      document: m.company.document ?? undefined,
+      is_active: m.company.isActive,
+    }));
   }
 }

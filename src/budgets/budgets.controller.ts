@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
@@ -11,71 +10,50 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { getCompanyIdFromRequest } from '../auth/company-id';
+import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BudgetsService } from './budgets.service';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 
 @Controller('budgets')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyGuard)
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
   @Get()
-  async list(
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async list(@Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.budgetsService.list(companyId);
   }
 
   @Get(':id')
-  async getById(
-    @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async getById(@Param('id') id: string, @Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.budgetsService.getById(companyId, id);
   }
 
   @Post()
-  async create(
-    @Req() req: { user?: { sub?: string; id?: string; company_id?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-    @Body() dto: CreateBudgetDto,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async create(@Req() req: any, @Body() dto: CreateBudgetDto) {
+    const companyId = getCompanyIdFromRequest(req);
     const userId = req.user?.sub ?? req.user?.id ?? null;
-
-    console.log('[budgets] POST', {
-      companyId,
-      userId: req.user?.sub ?? req.user?.id,
-    });
-
     return this.budgetsService.create(companyId, userId, dto);
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string; sub?: string; id?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Req() req: any,
     @Body() dto: UpdateBudgetDto,
   ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    const companyId = getCompanyIdFromRequest(req);
     const userId = req.user?.sub ?? req.user?.id ?? null;
     return this.budgetsService.update(companyId, id, dto, userId);
   }
 
   @Delete(':id')
-  async remove(
-    @Param('id') id: string,
-    @Req() req: { user?: { company_id?: string; companyId?: string } },
-    @Headers('x-company-id') xCompanyId: string | undefined,
-  ) {
-    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
     return this.budgetsService.remove(companyId, id);
   }
 }
