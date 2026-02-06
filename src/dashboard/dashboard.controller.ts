@@ -34,10 +34,10 @@ export class DashboardController {
     const companyId = getCompanyIdFromRequest(req, xCompanyId);
     const days = Math.min(
       365,
-      Math.max(7, parseInt(daysParam ?? '30', 10) || 30),
+      Math.max(1, parseInt(daysParam ?? '30', 10) || 30),
     );
-    if (!Number.isFinite(days) || days < 7 || days > 365) {
-      throw new BadRequestException('days deve ser entre 7 e 365');
+    if (!Number.isFinite(days) || days < 1 || days > 365) {
+      throw new BadRequestException('days deve ser entre 1 e 365');
     }
     return this.dashboardService.getCashFlow(companyId, days);
   }
