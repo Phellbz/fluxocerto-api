@@ -7,6 +7,8 @@ import { HealthController } from './health.controller';
 import { AuthModule } from './auth/auth.module';
 import { MeController } from './me/me.controller';
 import { AdminModule } from './admin/admin.module';
+import { SystemModule } from './system/system.module';
+import { CompaniesModule } from './companies/companies.module';
 
 import { PrismaModule } from '../prisma/prisma.module';
 import { MovementsModule } from './movements/movements.module';
@@ -26,6 +28,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
   imports: [
     AuthModule,
     AdminModule,
+    SystemModule,
+    CompaniesModule,
     PrismaModule,
     MovementsModule,
     BankAccountsModule,

@@ -69,4 +69,15 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE_NAME, { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
     return { ok: true };
   }
+
+  @Post('first-access')
+  async firstAccess(@Body() body: { email: string; tempPassword: string; newPassword: string }) {
+    const result = await this.auth.firstAccess(
+      body.email,
+      body.tempPassword,
+      body.newPassword,
+    );
+    if (!result) throw new UnauthorizedException('Credenciais temporárias inválidas');
+    return result;
+  }
 }

@@ -27,6 +27,7 @@ enum CategoryFlowType {
 
 enum CompanyRole {
   master
+  owner
   admin
   financeiro
   estoque

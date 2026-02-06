@@ -125,4 +125,28 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
   }
+
+  /**
+   * Primeiro acesso: trocar senha temporária por nova. Retorna { ok: true } ou null se tempPassword inválida.
+   */
+  async firstAccess(
+    email: string,
+    tempPassword: string,
+    newPassword: string,
+  ): Promise<{ ok: true } | null> {
+    const user = await this.prisma.appUser.findUnique({
+      where: { email: email?.trim().toLowerCase() },
+    });
+    if (!user || !tempPassword || !newPassword || String(newPassword).length < 6) {
+      return null;
+    }
+    const validTemp = await bcrypt.compare(tempPassword, user.passwordHash);
+    if (!validTemp) return null;
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.appUser.update({
+      where: { id: user.id },
+      data: { passwordHash: newHash, mustChangePassword: false },
+    });
+    return { ok: true };
+  }
 }

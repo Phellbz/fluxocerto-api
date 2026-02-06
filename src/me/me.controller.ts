@@ -15,7 +15,7 @@ export class MeController {
 
     if (user.isSystemAdmin === true) {
       const companies = await this.prisma.company.findMany({
-        orderBy: { name: 'asc' },
+        orderBy: { createdAt: 'desc' },
         select: { id: true, name: true, document: true, isActive: true },
       });
       return companies.map((c) => ({
@@ -30,11 +30,13 @@ export class MeController {
       where: { userId: user.sub, isActive: true },
       include: { company: true },
     });
-    return members.map((m) => ({
-      id: m.company.id,
-      name: m.company.name,
-      document: m.company.document ?? undefined,
-      is_active: m.company.isActive,
-    }));
+    return members
+      .filter((m) => m.company.isActive)
+      .map((m) => ({
+        id: m.company.id,
+        name: m.company.name,
+        document: m.company.document ?? undefined,
+        is_active: m.company.isActive,
+      }));
   }
 }
