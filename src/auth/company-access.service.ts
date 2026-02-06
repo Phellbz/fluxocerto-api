@@ -12,7 +12,8 @@ export interface CompanyAccess {
 
 /**
  * Valida que o usuário (req.user.sub) pertence à empresa do header X-Company-Id
- * via company_members. Retorna companyId e role; lança 400/403 se inválido.
+ * via company_members, ou que é System Admin (acessa qualquer empresa existente).
+ * Retorna companyId e role; lança 400/403 se inválido.
  */
 @Injectable()
 export class CompanyAccessService {
@@ -21,6 +22,7 @@ export class CompanyAccessService {
   async validateAndGetCompanyId(
     userId: string,
     xCompanyId: string | undefined,
+    isSystemAdmin?: boolean,
   ): Promise<CompanyAccess> {
     const companyId = (xCompanyId ?? '').trim();
     if (!companyId) {
@@ -28,6 +30,19 @@ export class CompanyAccessService {
     }
     if (!userId) {
       throw new BadRequestException('Usuário não autenticado');
+    }
+
+    if (isSystemAdmin === true) {
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { id: true },
+      });
+      if (!company) {
+        throw new ForbiddenException(
+          'Empresa informada em X-Company-Id não existe',
+        );
+      }
+      return { companyId: company.id, role: 'system_admin' };
     }
 
     const member = await this.prisma.companyMember.findFirst({

@@ -1,5 +1,6 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtPayload } from '../auth/jwt-payload';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('me')
@@ -8,12 +9,25 @@ export class MeController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get('companies')
-  async companies(@Req() req: { user?: { sub?: string } }) {
-    const userId = req.user?.sub;
-    if (!userId) return [];
+  async companies(@Req() req: { user?: JwtPayload }) {
+    const user = req.user;
+    if (!user?.sub) return [];
+
+    if (user.isSystemAdmin === true) {
+      const companies = await this.prisma.company.findMany({
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, document: true, isActive: true },
+      });
+      return companies.map((c) => ({
+        id: c.id,
+        name: c.name,
+        document: c.document ?? undefined,
+        is_active: c.isActive,
+      }));
+    }
 
     const members = await this.prisma.companyMember.findMany({
-      where: { userId, isActive: true },
+      where: { userId: user.sub, isActive: true },
       include: { company: true },
     });
     return members.map((m) => ({

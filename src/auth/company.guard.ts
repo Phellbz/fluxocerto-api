@@ -17,10 +17,12 @@ export class CompanyGuard implements CanActivate {
     const req = context.switchToHttp().getRequest();
     const userId = req.user?.sub;
     const xCompanyId = req.headers['x-company-id'] as string | undefined;
+    const isSystemAdmin = req.user?.isSystemAdmin === true;
 
     const access = await this.companyAccess.validateAndGetCompanyId(
       userId,
       xCompanyId,
+      isSystemAdmin,
     );
     (req as any).companyId = access.companyId;
     (req as any).companyRole = access.role;

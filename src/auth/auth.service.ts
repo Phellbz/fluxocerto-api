@@ -37,7 +37,11 @@ export class AuthService {
     if (!ok) return null;
 
     const accessToken = await this.jwt.signAsync(
-      { sub: user.id, email: user.email },
+      {
+        sub: user.id,
+        email: user.email,
+        isSystemAdmin: user.isSystemAdmin,
+      },
       { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
     );
 
@@ -102,7 +106,11 @@ export class AuthService {
     });
 
     const accessToken = await this.jwt.signAsync(
-      { sub: user.id, email: user.email },
+      {
+        sub: user.id,
+        email: user.email,
+        isSystemAdmin: user.isSystemAdmin,
+      },
       { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
     );
 
