@@ -1,6 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InstallmentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FinancialAccountPaymentsService } from '../financial-account-payments/financial-account-payments.service';
+import { SettleInstallmentDto } from './dto/settle-installment.dto';
 
 export interface ListInstallmentsQuery {
   status?: 'open' | 'partial' | 'paid';
@@ -14,7 +21,10 @@ export interface ListInstallmentsQuery {
 
 @Injectable()
 export class InstallmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentsService: FinancialAccountPaymentsService,
+  ) {}
 
   async list(companyId: string, query: ListInstallmentsQuery) {
     const limit = Math.min(500, Math.max(1, parseInt(query.limit ?? '500', 10) || 500));
@@ -70,6 +80,54 @@ export class InstallmentsService {
           },
         },
       },
+    });
+  }
+
+  /**
+   * Dar baixa na parcela: cria financial_account_payment e recalcula installment + financial_account.
+   * Retorna o payment criado (não altera installment diretamente sem criar payment).
+   */
+  async settle(
+    companyId: string,
+    installmentId: string,
+    dto: SettleInstallmentDto,
+    userId: string | null,
+  ) {
+    const paidAmount = Number(dto.paidAmount ?? 0);
+    if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+      throw new BadRequestException(
+        'paidAmount é obrigatório e deve ser maior que zero para dar baixa',
+      );
+    }
+
+    const installment = await this.prisma.installment.findFirst({
+      where: { id: installmentId, companyId },
+      include: { financialAccount: true },
+    });
+    if (!installment) {
+      throw new NotFoundException('Parcela não encontrada');
+    }
+    if (installment.companyId !== companyId) {
+      throw new ForbiddenException(
+        'Parcela não pertence à empresa informada',
+      );
+    }
+
+    const paymentDate =
+      dto.paymentDate?.trim() &&
+      !Number.isNaN(new Date(dto.paymentDate).getTime())
+        ? dto.paymentDate.trim()
+        : new Date().toISOString().slice(0, 10);
+
+    return this.paymentsService.createPayment(companyId, userId, {
+      financialAccountId: installment.financialAccountId,
+      installmentId: installment.id,
+      bankAccountId: (dto.bankAccountId ?? '').trim() || undefined,
+      paymentDate,
+      paidAmount,
+      interest: 0,
+      discount: 0,
+      notes: dto.notes ?? undefined,
     });
   }
 }

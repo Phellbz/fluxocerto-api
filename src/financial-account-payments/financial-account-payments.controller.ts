@@ -34,7 +34,7 @@ export class FinancialAccountPaymentsController {
         'Query param financialAccountId é obrigatório',
       );
     }
-    return this.paymentsService.list(companyId, accountId);
+    return this.paymentsService.listByFinancialAccount(companyId, accountId);
   }
 
   @Post()

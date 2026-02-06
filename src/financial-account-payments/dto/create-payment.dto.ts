@@ -9,8 +9,9 @@ export class CreateFinancialAccountPaymentDto {
   @IsUUID()
   installmentId?: string | null;
 
+  @IsOptional()
   @IsUUID()
-  bankAccountId: string;
+  bankAccountId?: string | null;
 
   @IsString()
   paymentDate: string;

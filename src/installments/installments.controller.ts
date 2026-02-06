@@ -1,7 +1,10 @@
 import {
+  Body,
   Controller,
   Get,
   Headers,
+  Param,
+  Patch,
   Query,
   Req,
   UseGuards,
@@ -12,6 +15,7 @@ import {
   InstallmentsService,
   ListInstallmentsQuery,
 } from './installments.service';
+import { SettleInstallmentDto } from './dto/settle-installment.dto';
 
 @Controller('installments')
 @UseGuards(JwtAuthGuard)
@@ -41,5 +45,19 @@ export class InstallmentsController {
       offset,
     };
     return this.installmentsService.list(companyId, query);
+  }
+
+  @Patch(':id')
+  async settle(
+    @Param('id') id: string,
+    @Req() req: {
+      user?: { sub?: string; id?: string; company_id?: string; companyId?: string };
+    },
+    @Headers('x-company-id') xCompanyId: string | undefined,
+    @Body() dto: SettleInstallmentDto,
+  ) {
+    const companyId = getCompanyIdFromRequest(req, xCompanyId);
+    const userId = req.user?.sub ?? req.user?.id ?? null;
+    return this.installmentsService.settle(companyId, id, dto, userId);
   }
 }

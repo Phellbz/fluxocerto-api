@@ -236,7 +236,7 @@ model FinancialAccountPayment {
   companyId          String           @map("company_id")
   financialAccountId String           @map("financial_account_id")
   installmentId      String?          @map("installment_id")
-  bankAccountId      String           @map("bank_account_id")
+  bankAccountId      String?          @map("bank_account_id")
   paymentDate        DateTime         @map("payment_date") @db.Date
   paidAmount         Decimal          @map("paid_amount") @db.Decimal(14, 2)
   interest           Decimal          @default(0) @map("interest") @db.Decimal(14, 2)
@@ -250,7 +250,7 @@ model FinancialAccountPayment {
   company          Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
   financialAccount FinancialAccount @relation(fields: [financialAccountId], references: [id], onDelete: Restrict)
   installment      Installment?     @relation(fields: [installmentId], references: [id], onDelete: SetNull)
-  bankAccount      BankAccount      @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  bankAccount      BankAccount?     @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
   movement         Movement?
 
   @@index([companyId])

@@ -20,7 +20,7 @@ function toPaymentResponse(
     id: string;
     financialAccountId: string;
     installmentId: string | null;
-    bankAccountId: string;
+    bankAccountId: string | null;
     paymentDate: Date;
     paidAmount: unknown;
     interest: unknown;
@@ -58,14 +58,21 @@ export class FinancialAccountPaymentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Lista payments da financial account; financialAccountId obrigatório. */
-  async list(companyId: string, financialAccountId: string) {
+  async listByFinancialAccount(companyId: string, financialAccountId: string) {
     try {
+      const account = await this.prisma.financialAccount.findFirst({
+        where: { id: financialAccountId, companyId },
+      });
+      if (!account) {
+        throw new NotFoundException('Conta financeira não encontrada');
+      }
       const rows = await this.prisma.financialAccountPayment.findMany({
         where: { companyId, financialAccountId },
-        orderBy: [{ paymentDate: 'asc' }, { createdAt: 'asc' }],
+        orderBy: [{ paymentDate: 'desc' }, { createdAt: 'desc' }],
       });
       return rows.map(toPaymentResponse);
     } catch (err) {
+      if (err instanceof NotFoundException) throw err;
       console.error('GET /financial-account-payments failed', {
         companyId,
         financialAccountId,
@@ -73,6 +80,15 @@ export class FinancialAccountPaymentsService {
       });
       throw err;
     }
+  }
+
+  /** Cria payment, aplica FIFO nas parcelas e recalcula status da conta (alias para createPayment). */
+  async createPaymentAndRecalc(
+    companyId: string,
+    userId: string | null,
+    dto: CreateFinancialAccountPaymentDto,
+  ) {
+    return this.createPayment(companyId, userId, dto);
   }
 
   async createPayment(
@@ -87,6 +103,15 @@ export class FinancialAccountPaymentsService {
     const discount = Number(dto.discount ?? 0);
     if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
       throw new BadRequestException('paidAmount deve ser maior que zero');
+    }
+    if (!Number.isFinite(interest) || interest < 0) {
+      throw new BadRequestException('interest deve ser maior ou igual a zero');
+    }
+    if (!Number.isFinite(discount) || discount < 0) {
+      throw new BadRequestException('discount deve ser maior ou igual a zero');
+    }
+    if (discount > paidAmount) {
+      throw new BadRequestException('discount não pode ser maior que paidAmount');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -111,7 +136,7 @@ export class FinancialAccountPaymentsService {
           companyId,
           financialAccountId: dto.financialAccountId,
           installmentId: dto.installmentId ?? null,
-          bankAccountId: dto.bankAccountId,
+          bankAccountId: (dto.bankAccountId ?? '').trim() || null,
           paymentDate,
           paidAmount: String(paidAmount),
           interest: String(interest),
@@ -212,23 +237,26 @@ export class FinancialAccountPaymentsService {
         (account.kind === 'receivable' ? 'Recebimento: ' : 'Pagamento: ') +
         (account.description || 'Conta financeira');
 
-      await tx.movement.create({
-        data: {
-          companyId,
-          description: movementDesc,
-          amountCents,
-          direction,
-          occurredAt: paymentDate,
-          bankAccountId: dto.bankAccountId,
-          paymentId: payment.id,
-          source: 'system',
-          status: MovementStatus.REALIZED,
-          isReconciled: true,
-          categoryId: account.categoryId,
-          contactId: account.contactId,
-          departmentId: account.departmentId,
-        },
-      });
+      const bankAccountIdPayment = (dto.bankAccountId ?? '').trim() || null;
+      if (bankAccountIdPayment != null) {
+        await tx.movement.create({
+          data: {
+            companyId,
+            description: movementDesc,
+            amountCents,
+            direction,
+            occurredAt: paymentDate,
+            bankAccountId: bankAccountIdPayment,
+            paymentId: payment.id,
+            source: 'system',
+            status: MovementStatus.REALIZED,
+            isReconciled: true,
+            categoryId: account.categoryId,
+            contactId: account.contactId,
+            departmentId: account.departmentId,
+          },
+        });
+      }
 
       const created = await tx.financialAccountPayment.findUniqueOrThrow({
         where: { id: payment.id },
