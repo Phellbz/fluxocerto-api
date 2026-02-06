@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -27,10 +28,13 @@ export class FinancialAccountPaymentsController {
     @Query('financialAccountId') financialAccountId?: string,
   ) {
     const companyId = getCompanyIdFromRequest(req, xCompanyId);
-    return this.paymentsService.list(
-      companyId,
-      financialAccountId ?? undefined,
-    );
+    const accountId = (financialAccountId ?? '').trim();
+    if (!accountId) {
+      throw new BadRequestException(
+        'Query param financialAccountId é obrigatório',
+      );
+    }
+    return this.paymentsService.list(companyId, accountId);
   }
 
   @Post()

@@ -29,17 +29,19 @@ function toPaymentResponse(
     createdAt: Date;
   },
 ) {
+  const date = row.paymentDate instanceof Date ? row.paymentDate : new Date(row.paymentDate);
+  const created = row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt);
   return {
     id: row.id,
     financialAccountId: row.financialAccountId,
-    installmentId: row.installmentId,
+    installmentId: row.installmentId ?? null,
     bankAccountId: row.bankAccountId,
-    paymentDate: row.paymentDate.toISOString().slice(0, 10),
-    paidAmount: Number(row.paidAmount),
-    interest: Number(row.interest),
-    discount: Number(row.discount),
-    notes: row.notes,
-    createdAt: row.createdAt.toISOString(),
+    paymentDate: Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10),
+    paidAmount: Number(row.paidAmount) || 0,
+    interest: Number(row.interest) || 0,
+    discount: Number(row.discount) || 0,
+    notes: row.notes ?? null,
+    createdAt: Number.isNaN(created.getTime()) ? '' : created.toISOString(),
   };
 }
 
@@ -55,19 +57,22 @@ function toDateOnly(value: string): Date {
 export class FinancialAccountPaymentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Lista payments por companyId; opcionalmente filtra por financialAccountId. */
-  async list(companyId: string, financialAccountId?: string | null) {
-    const where: { companyId: string; financialAccountId?: string } = {
-      companyId,
-    };
-    if (financialAccountId != null && financialAccountId !== '') {
-      where.financialAccountId = financialAccountId;
+  /** Lista payments da financial account; financialAccountId obrigatório. */
+  async list(companyId: string, financialAccountId: string) {
+    try {
+      const rows = await this.prisma.financialAccountPayment.findMany({
+        where: { companyId, financialAccountId },
+        orderBy: [{ paymentDate: 'asc' }, { createdAt: 'asc' }],
+      });
+      return rows.map(toPaymentResponse);
+    } catch (err) {
+      console.error('GET /financial-account-payments failed', {
+        companyId,
+        financialAccountId,
+        message: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
     }
-    const rows = await this.prisma.financialAccountPayment.findMany({
-      where,
-      orderBy: { paymentDate: 'desc', createdAt: 'desc' },
-    });
-    return rows.map(toPaymentResponse);
   }
 
   async createPayment(
