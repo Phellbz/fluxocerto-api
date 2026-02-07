@@ -9,6 +9,7 @@ import { MeController } from './me/me.controller';
 import { AdminModule } from './admin/admin.module';
 import { SystemModule } from './system/system.module';
 import { CompaniesModule } from './companies/companies.module';
+import { ServicesCatalogModule } from './services-catalog/services-catalog.module';
 
 import { PrismaModule } from '../prisma/prisma.module';
 import { MovementsModule } from './movements/movements.module';
@@ -30,6 +31,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     AdminModule,
     SystemModule,
     CompaniesModule,
+    ServicesCatalogModule,
     PrismaModule,
     MovementsModule,
     BankAccountsModule,

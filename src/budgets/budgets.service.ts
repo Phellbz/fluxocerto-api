@@ -52,7 +52,9 @@ function toBudgetStatus(v: string | null | undefined): BudgetStatus {
 
 function toBudgetItemType(v: string | null | undefined): BudgetItemType {
   const s = (v ?? '').toString().trim().toLowerCase();
-  return s === 'material' ? BudgetItemType.material : BudgetItemType.service;
+  if (s === 'product') return BudgetItemType.product;
+  if (s === 'material') return BudgetItemType.material;
+  return BudgetItemType.service;
 }
 
 function buildBudgetData(
@@ -114,27 +116,131 @@ function buildBudgetUpdateData(
   return data;
 }
 
-function buildItemRows(
+async function buildItemRows(
+  tx: Prisma.TransactionClient,
   items: BudgetItemInputDto[] | undefined,
   companyId: string,
   budgetId: string,
   userId: string | null,
-): Prisma.BudgetItemCreateManyInput[] {
+): Promise<Prisma.BudgetItemUncheckedCreateInput[]> {
   if (!items?.length) return [];
   const uid = userId ?? USER_PLACEHOLDER;
-  return items.map((it) => ({
-    companyId,
-    budgetId,
-    itemType: toBudgetItemType(it.itemType),
-    productId: str(it.productId) ?? undefined,
-    description: (str(it.description) ?? '').trim() || 'Item',
-    quantity: toDecimal(it.quantity) ?? '0',
-    unitPrice: toDecimal(it.unitPrice) ?? '0',
-    discountPercent: toDecimal(it.discountPercent) ?? '0',
-    lineTotal: toDecimal(it.lineTotal) ?? '0',
-    createdByUserId: uid,
-    updatedByUserId: uid,
-  }));
+  const rows: Prisma.BudgetItemUncheckedCreateInput[] = [];
+
+  for (const it of items) {
+    const itemType = toBudgetItemType(it.itemType);
+    const quantityNum = Number(it.quantity) || 0;
+    const quantityStr = toDecimal(it.quantity) ?? '0';
+    const discountPercentStr = toDecimal(it.discountPercent) ?? '0';
+
+    if (itemType === BudgetItemType.service || (it.serviceId && !it.productId)) {
+      const serviceId = str(it.serviceId);
+      if (!serviceId) {
+        throw new BadRequestException('itemType SERVICE exige serviceId');
+      }
+      const service = await tx.service.findFirst({
+        where: { id: serviceId, companyId },
+      });
+      if (!service) {
+        throw new BadRequestException(`Serviço não encontrado: ${serviceId}`);
+      }
+      const unitPriceCentsSnapshot =
+        it.unitPriceCents != null && Number.isFinite(Number(it.unitPriceCents))
+          ? Math.round(Number(it.unitPriceCents))
+          : (service.unitPriceCents ?? 0);
+      const totalCents = Math.round(unitPriceCentsSnapshot * quantityNum);
+      const unitPrice = String(unitPriceCentsSnapshot / 100);
+      const lineTotal = String(totalCents / 100);
+      const descriptionSnapshot = service.shortDescription || service.fullDescription || '';
+      const taxSnapshot = {
+        issRate: service.issRate != null ? Number(service.issRate) : null,
+        withholdIss: service.withholdIss,
+        pisRate: service.pisRate != null ? Number(service.pisRate) : null,
+        withholdPis: service.withholdPis,
+        cofinsRate: service.cofinsRate != null ? Number(service.cofinsRate) : null,
+        withholdCofins: service.withholdCofins,
+        csllRate: service.csllRate != null ? Number(service.csllRate) : null,
+        withholdCsll: service.withholdCsll,
+        irRate: service.irRate != null ? Number(service.irRate) : null,
+        withholdIr: service.withholdIr,
+        serviceTaxation: service.serviceTaxation,
+        lc116Code: service.lc116Code,
+        municipalServiceCode: service.municipalServiceCode,
+        nbsCode: service.nbsCode,
+        serviceCode: service.serviceCode,
+        integrationCode: service.integrationCode,
+      };
+      rows.push({
+        companyId,
+        budgetId,
+        itemType: BudgetItemType.service,
+        productId: null,
+        serviceId: service.id,
+        description: descriptionSnapshot || 'Item',
+        descriptionSnapshot: descriptionSnapshot || 'Item',
+        unitPrice,
+        unitPriceCentsSnapshot,
+        taxSnapshot: taxSnapshot as unknown as Prisma.JsonObject,
+        quantity: quantityStr,
+        discountPercent: discountPercentStr,
+        lineTotal,
+        totalCents,
+        createdByUserId: uid,
+        updatedByUserId: uid,
+      });
+      continue;
+    }
+
+    const productId = str(it.productId);
+    const description = (str(it.description) ?? '').trim() || 'Item';
+    let unitPriceStr = toDecimal(it.unitPrice) ?? '0';
+    let lineTotalStr = toDecimal(it.lineTotal) ?? '0';
+    let descriptionSnapshot = description;
+    let unitPriceCentsSnapshot = Math.round(Number(unitPriceStr) * 100) || 0;
+    let totalCents: number | null = Math.round(Number(lineTotalStr) * 100) || null;
+
+    if (productId) {
+      const product = await tx.product.findFirst({
+        where: { id: productId, companyId },
+      });
+      if (product) {
+        descriptionSnapshot = product.descricao || product.codigoProduto || description;
+        const precoVenda = product.precoVenda != null ? Number(product.precoVenda) : 0;
+        if (it.unitPriceCents != null && Number.isFinite(Number(it.unitPriceCents))) {
+          unitPriceCentsSnapshot = Math.round(Number(it.unitPriceCents));
+        } else {
+          unitPriceCentsSnapshot = Math.round(precoVenda * 100);
+        }
+        unitPriceStr = String(unitPriceCentsSnapshot / 100);
+        totalCents = Math.round(unitPriceCentsSnapshot * quantityNum);
+        lineTotalStr = String(totalCents / 100);
+      }
+    } else if (!lineTotalStr || Number(lineTotalStr) === 0) {
+      totalCents = unitPriceCentsSnapshot * quantityNum;
+      lineTotalStr = String(totalCents / 100);
+    }
+
+    rows.push({
+      companyId,
+      budgetId,
+      itemType: itemType as BudgetItemType,
+      productId: productId ?? undefined,
+      serviceId: null,
+      description,
+      descriptionSnapshot: descriptionSnapshot || 'Item',
+      unitPrice: unitPriceStr,
+      unitPriceCentsSnapshot,
+      taxSnapshot: Prisma.JsonNull,
+      quantity: quantityStr,
+      discountPercent: discountPercentStr,
+      lineTotal: lineTotalStr,
+      totalCents: totalCents ?? undefined,
+      createdByUserId: uid,
+      updatedByUserId: uid,
+    });
+  }
+
+  return rows;
 }
 
 /** Divide total em N parcelas iguais; última parcela ajusta centavos. */
@@ -197,7 +303,7 @@ export class BudgetsService {
 
     const result = await this.prisma.$transaction(async (tx) => {
       const budget = await tx.budget.create({ data: budgetData });
-      const itemRows = buildItemRows(dto.items, companyId, budget.id, userId);
+      const itemRows = await buildItemRows(tx, dto.items, companyId, budget.id, userId);
       if (itemRows.length > 0) {
         await tx.budgetItem.createMany({ data: itemRows });
       }
@@ -322,11 +428,11 @@ export class BudgetsService {
     }
 
     const updateData = buildBudgetUpdateData(dto, userId);
-    const itemRows = buildItemRows(dto.items, companyId, id, userId);
 
     const result = await this.prisma.$transaction(async (tx) => {
       await tx.budget.update({ where: { id }, data: updateData });
       await tx.budgetItem.deleteMany({ where: { budgetId: id } });
+      const itemRows = await buildItemRows(tx, dto.items, companyId, id, userId);
       if (itemRows.length > 0) {
         await tx.budgetItem.createMany({ data: itemRows });
       }

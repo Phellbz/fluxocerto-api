@@ -72,6 +72,7 @@ enum BudgetStatus {
 }
 
 enum BudgetItemType {
+  product  @map("product")
   service  @map("service")
   material @map("material")
 }
@@ -343,24 +344,30 @@ model Budget {
 }
 
 model BudgetItem {
-  id                String         @id @default(uuid()) @map("id")
-  companyId         String         @map("company_id")
-  budgetId          String         @map("budget_id")
-  itemType          BudgetItemType @map("item_type")
-  productId         String?        @map("product_id")
-  description       String         @map("description")
-  quantity          Decimal        @map("quantity") @db.Decimal(14, 2)
-  unitPrice         Decimal        @map("unit_price") @db.Decimal(14, 2)
-  discountPercent   Decimal        @default(0) @map("discount_percent") @db.Decimal(14, 2)
-  lineTotal         Decimal        @map("line_total") @db.Decimal(14, 2)
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
-  createdByUserId   String        @map("created_by_user_id")
-  updatedByUserId   String        @map("updated_by_user_id")
+  id                     String         @id @default(uuid()) @map("id")
+  companyId              String         @map("company_id")
+  budgetId               String         @map("budget_id")
+  itemType               BudgetItemType @map("item_type")
+  productId              String?        @map("product_id")
+  serviceId              String?        @map("service_id")
+  description            String         @map("description")
+  descriptionSnapshot    String         @default("") @map("description_snapshot")
+  unitPrice              Decimal        @map("unit_price") @db.Decimal(14, 2)
+  unitPriceCentsSnapshot Int            @default(0) @map("unit_price_cents_snapshot")
+  taxSnapshot            Json?          @map("tax_snapshot")
+  quantity               Decimal        @map("quantity") @db.Decimal(14, 2)
+  discountPercent        Decimal        @default(0) @map("discount_percent") @db.Decimal(14, 2)
+  lineTotal              Decimal        @map("line_total") @db.Decimal(14, 2)
+  totalCents             Int?           @map("total_cents")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+  createdByUserId        String         @map("created_by_user_id")
+  updatedByUserId       String         @map("updated_by_user_id")
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  budget  Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  budget   Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  product  Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  service  Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
 
   @@index([companyId])
   @@index([budgetId], map: "budget_items_budget_idx")
@@ -398,6 +405,42 @@ model Product {
   @@index([companyId], map: "products_company_idx")
   @@index([codigoProduto], map: "products_codigo_idx")
   @@map("products")
+}
+
+model Service {
+  id                   String    @id @default(uuid()) @map("id")
+  companyId            String    @map("company_id")
+  integrationCode      String?   @map("integration_code")
+  serviceCode          String    @map("service_code")
+  shortDescription     String    @map("short_description")
+  serviceTaxation      String    @map("service_taxation")
+  municipalServiceCode String?   @map("municipal_service_code")
+  lc116Code           String?   @map("lc116_code")
+  nbsCode             String?   @map("nbs_code")
+  unitPriceCents      Int?      @map("unit_price_cents")
+  fullDescription     String?   @map("full_description")
+
+  issRate      Decimal? @map("iss_rate") @db.Decimal(5, 2)
+  withholdIss  Boolean  @default(false) @map("withhold_iss")
+  pisRate      Decimal? @map("pis_rate") @db.Decimal(5, 2)
+  withholdPis  Boolean  @default(false) @map("withhold_pis")
+  cofinsRate   Decimal? @map("cofins_rate") @db.Decimal(5, 2)
+  withholdCofins Boolean @default(false) @map("withhold_cofins")
+  csllRate     Decimal? @map("csll_rate") @db.Decimal(5, 2)
+  withholdCsll Boolean  @default(false) @map("withhold_csll")
+  irRate       Decimal? @map("ir_rate") @db.Decimal(5, 2)
+  withholdIr   Boolean  @default(false) @map("withhold_ir")
+
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  budgetItems BudgetItem[]
+
+  @@unique([companyId, serviceCode], map: "services_company_service_code_unique")
+  @@index([companyId, isActive], map: "services_company_active_idx")
+  @@map("services")
 }
 
 // --- Base estrutural multi-empresa (Etapa 01). Autenticação atual NÃO usa estas tabelas. ---
@@ -454,6 +497,7 @@ model Company {
   categories        Category[]
   departments       Department[]
   products          Product[]
+  services          Service[]
   budgets           Budget[]
   budgetItems       BudgetItem[]
   financialAccounts FinancialAccount[]
