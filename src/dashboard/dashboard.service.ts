@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BankAccountsService } from '../bank-accounts/bank-accounts.service';
 
+/** Resposta do GET /dashboard/cash-today: soma dos currentBalance das contas ativas. */
 export interface CashTodayResponse {
-  openingBalanceTotal: number;
-  movementsInTotal: number;
-  movementsOutTotal: number;
-  cashToday: number;
+  total: number;
 }
 
 export interface CashFlowDayItem {
@@ -30,7 +29,10 @@ export interface CashFlowResponse {
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bankAccountService: BankAccountsService,
+  ) {}
 
   async getCashFlow(companyId: string, days: number): Promise<CashFlowResponse> {
     type TodayRow = { today: string };
@@ -41,7 +43,7 @@ export class DashboardService {
       todayResult?.today ?? new Date().toISOString().slice(0, 10);
 
     const cashTodayRes = await this.getCashToday(companyId);
-    const cashToday = cashTodayRes.cashToday;
+    const cashToday = cashTodayRes.total;
 
     type OverdueRow = { kind: string; total: string };
     const overdueRows = await this.prisma.$queryRaw<OverdueRow[]>`
@@ -124,33 +126,17 @@ export class DashboardService {
     };
   }
 
+  /**
+   * Caixa hoje = soma dos currentBalance das contas ativas.
+   * Usa exatamente a mesma lógica de GET /bank-accounts (sem recalcular na tabela movements).
+   */
   async getCashToday(companyId: string): Promise<CashTodayResponse> {
-    const [openSum, inSum, outSum] = await Promise.all([
-      this.prisma.bankAccount.aggregate({
-        where: { companyId, isActive: true },
-        _sum: { openingBalance: true },
-      }),
-      this.prisma.movement.aggregate({
-        where: { companyId, direction: 'in' },
-        _sum: { amountCents: true },
-      }),
-      this.prisma.movement.aggregate({
-        where: { companyId, direction: 'out' },
-        _sum: { amountCents: true },
-      }),
-    ]);
-
-    const openingBalanceTotal = Number(openSum._sum?.openingBalance ?? 0);
-    const movementsInTotal = (inSum._sum?.amountCents ?? 0) / 100;
-    const movementsOutTotal = (outSum._sum?.amountCents ?? 0) / 100;
-    const cashToday = openingBalanceTotal + movementsInTotal - movementsOutTotal;
-
-    return {
-      openingBalanceTotal,
-      movementsInTotal,
-      movementsOutTotal,
-      cashToday,
-    };
+    const accounts = await this.bankAccountService.list(companyId);
+    const total = accounts.reduce(
+      (sum, acc) => sum + (acc.currentBalance ?? 0),
+      0,
+    );
+    return { total: Math.round(total * 100) / 100 };
   }
 }
 

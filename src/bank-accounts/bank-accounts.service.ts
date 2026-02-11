@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { BankAccountType, Prisma } from '@prisma/client';
+import { BankAccountType, MovementStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
@@ -56,17 +56,56 @@ function toBankAccountResponse(record: BankAccountRecord) {
 export class BankAccountsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Lista contas ativas com currentBalance.
+   * Regra: currentBalance = openingBalance + entradas(realized) - saídas(realized).
+   * Considera apenas movements com status REALIZED e bankAccountId preenchido.
+   */
   async list(companyId: string) {
-    const rows = await this.prisma.bankAccount.findMany({
+    const accounts = await this.prisma.bankAccount.findMany({
       where: { companyId, isActive: true },
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map(toBankAccountResponse);
+    if (accounts.length === 0) return [];
+
+    const movementsAgg = await this.prisma.movement.groupBy({
+      by: ['bankAccountId', 'direction'],
+      where: {
+        companyId,
+        status: MovementStatus.REALIZED,
+        bankAccountId: { not: null },
+      },
+      _sum: { amountCents: true },
+    });
+
+    const movementMap = new Map<string, { in: number; out: number }>();
+    movementsAgg.forEach((m) => {
+      if (m.bankAccountId == null) return;
+      if (!movementMap.has(m.bankAccountId)) {
+        movementMap.set(m.bankAccountId, { in: 0, out: 0 });
+      }
+      const entry = movementMap.get(m.bankAccountId)!;
+      if (m.direction === 'in') {
+        entry.in = m._sum.amountCents ?? 0;
+      } else {
+        entry.out = m._sum.amountCents ?? 0;
+      }
+    });
+
+    return accounts.map((acc) => {
+      const mov = movementMap.get(acc.id) ?? { in: 0, out: 0 };
+      const opening = Math.round((Number(acc.openingBalance ?? 0)) * 100);
+      const currentBalanceCents = opening + mov.in - mov.out;
+      return {
+        ...toBankAccountResponse(acc as BankAccountRecord),
+        currentBalance: Math.round(currentBalanceCents) / 100,
+      };
+    });
   }
 
   /**
-   * Overview: contas ativas com saldo atual (opening_balance + net movements).
-   * currentBalance em reais (2 casas); movementsInCents e movementsOutCents por conta.
+   * Overview: contas ativas com saldo atual (mesma regra de list: apenas movements realized).
+   * currentBalance em reais; movementsInCents e movementsOutCents por conta.
    */
   async overview(companyId: string) {
     const accounts = await this.prisma.bankAccount.findMany({
@@ -75,47 +114,36 @@ export class BankAccountsService {
     });
     if (accounts.length === 0) return [];
 
-    const ids = accounts.map((a) => a.id);
+    const movementsAgg = await this.prisma.movement.groupBy({
+      by: ['bankAccountId', 'direction'],
+      where: {
+        companyId,
+        status: MovementStatus.REALIZED,
+        bankAccountId: { not: null },
+      },
+      _sum: { amountCents: true },
+    });
 
-    const [inGroups, outGroups] = await Promise.all([
-      this.prisma.movement.groupBy({
-        by: ['bankAccountId'],
-        where: {
-          companyId,
-          bankAccountId: { in: ids },
-          direction: 'in',
-        },
-        _sum: { amountCents: true },
-      }),
-      this.prisma.movement.groupBy({
-        by: ['bankAccountId'],
-        where: {
-          companyId,
-          bankAccountId: { in: ids },
-          direction: 'out',
-        },
-        _sum: { amountCents: true },
-      }),
-    ]);
-
-    const inByAccount = new Map<string, number>();
-    for (const g of inGroups) {
-      if (g.bankAccountId != null)
-        inByAccount.set(g.bankAccountId, g._sum.amountCents ?? 0);
-    }
-    const outByAccount = new Map<string, number>();
-    for (const g of outGroups) {
-      if (g.bankAccountId != null)
-        outByAccount.set(g.bankAccountId, g._sum.amountCents ?? 0);
-    }
+    const movementMap = new Map<string, { in: number; out: number }>();
+    movementsAgg.forEach((m) => {
+      if (m.bankAccountId == null) return;
+      if (!movementMap.has(m.bankAccountId)) {
+        movementMap.set(m.bankAccountId, { in: 0, out: 0 });
+      }
+      const entry = movementMap.get(m.bankAccountId)!;
+      if (m.direction === 'in') {
+        entry.in = m._sum.amountCents ?? 0;
+      } else {
+        entry.out = m._sum.amountCents ?? 0;
+      }
+    });
 
     return accounts.map((row) => {
-      const movementsInCents = inByAccount.get(row.id) ?? 0;
-      const movementsOutCents = outByAccount.get(row.id) ?? 0;
+      const mov = movementMap.get(row.id) ?? { in: 0, out: 0 };
       const opening =
         row.openingBalance != null ? Number(row.openingBalance) : 0;
-      const netReais = (movementsInCents - movementsOutCents) / 100;
-      const currentBalance = Math.round((opening + netReais) * 100) / 100;
+      const currentBalance =
+        Math.round((opening * 100 + mov.in - mov.out)) / 100;
 
       return {
         id: row.id,
@@ -130,8 +158,8 @@ export class BankAccountsService {
           ? row.openingBalanceDate.toISOString().slice(0, 10)
           : null,
         currentBalance,
-        movementsInCents,
-        movementsOutCents,
+        movementsInCents: mov.in,
+        movementsOutCents: mov.out,
       };
     });
   }
