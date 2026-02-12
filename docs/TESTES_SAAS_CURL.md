@@ -117,6 +117,26 @@ curl -s "$BASE_URL/companies/$COMPANY_ID/members" \
 
 ---
 
+## 8) Bank balances e Caixa Hoje (consistência)
+
+**Validar:** `cashToday` (dashboard) === `totalCashToday` (balances) === soma de `accounts[].currentBalance`.
+
+```bash
+# GET /bank-accounts/balances
+curl -s "$BASE_URL/bank-accounts/balances" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "X-Company-Id: $COMPANY_ID"
+
+# GET /dashboard/cash-today
+curl -s "$BASE_URL/dashboard/cash-today" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "X-Company-Id: $COMPANY_ID"
+```
+
+Esperado: `cashToday` === `totalCashToday` e ambos === soma dos `accounts[].currentBalance`.
+
+---
+
 ## Variáveis de ambiente
 
 - `SYSTEM_ADMIN_BOOTSTRAP_SECRET`: obrigatório para `POST /system/bootstrap`

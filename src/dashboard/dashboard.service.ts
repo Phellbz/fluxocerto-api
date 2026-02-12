@@ -2,9 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BankAccountsService } from '../bank-accounts/bank-accounts.service';
 
-/** Resposta do GET /dashboard/cash-today: soma dos currentBalance das contas ativas. */
+/** Resposta do GET /dashboard/cash-today. cashToday = soma dos currentBalance das contas ativas. */
 export interface CashTodayResponse {
-  total: number;
+  openingBalanceTotal: number;
+  movementsInTotal: number;
+  movementsOutTotal: number;
+  cashToday: number;
 }
 
 export interface CashFlowDayItem {
@@ -43,7 +46,7 @@ export class DashboardService {
       todayResult?.today ?? new Date().toISOString().slice(0, 10);
 
     const cashTodayRes = await this.getCashToday(companyId);
-    const cashToday = cashTodayRes.total;
+    const cashToday = cashTodayRes.cashToday;
 
     type OverdueRow = { kind: string; total: string };
     const overdueRows = await this.prisma.$queryRaw<OverdueRow[]>`
@@ -128,15 +131,16 @@ export class DashboardService {
 
   /**
    * Caixa hoje = soma dos currentBalance das contas ativas.
-   * Usa exatamente a mesma lógica de GET /bank-accounts (sem recalcular na tabela movements).
+   * Usa a mesma base de getBalances (GET /bank-accounts/balances) para garantir consistência.
    */
   async getCashToday(companyId: string): Promise<CashTodayResponse> {
-    const accounts = await this.bankAccountService.list(companyId);
-    const total = accounts.reduce(
-      (sum, acc) => sum + (acc.currentBalance ?? 0),
-      0,
-    );
-    return { total: Math.round(total * 100) / 100 };
+    const balances = await this.bankAccountService.getBalances(companyId);
+    return {
+      openingBalanceTotal: balances.openingBalanceTotal ?? 0,
+      movementsInTotal: balances.movementsInTotal ?? 0,
+      movementsOutTotal: balances.movementsOutTotal ?? 0,
+      cashToday: balances.totalCashToday,
+    };
   }
 }
 

@@ -8,6 +8,31 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBankAccountDto } from './dto/create-bank-account.dto';
 import { UpdateBankAccountDto } from './dto/update-bank-account.dto';
 
+/** Garante número válido (0 se nulo/NaN). */
+function safeNum(v: number | null | undefined): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+}
+
+/** Resposta do GET /bank-accounts/balances */
+export interface BankBalancesResponse {
+  totalCashToday: number;
+  /** Totais globais (para dashboard cash-today). */
+  openingBalanceTotal?: number;
+  movementsInTotal?: number;
+  movementsOutTotal?: number;
+  accounts: Array<{
+    id: string;
+    name: string;
+    institution: string | null;
+    agency: string | null;
+    accountNumber: string | null;
+    accountType: string | null;
+    openingBalance: number;
+    openingBalanceDate: string | null;
+    currentBalance: number;
+  }>;
+}
+
 /** DTO com camelCase ou snake_case (frontend pode enviar ambos). */
 type DtoWithAliases = CreateBankAccountDto & {
   account_type?: string | null;
@@ -86,16 +111,16 @@ export class BankAccountsService {
       }
       const entry = movementMap.get(m.bankAccountId)!;
       if (m.direction === 'in') {
-        entry.in = m._sum.amountCents ?? 0;
+        entry.in = safeNum(m._sum.amountCents);
       } else {
-        entry.out = m._sum.amountCents ?? 0;
+        entry.out = safeNum(m._sum.amountCents);
       }
     });
 
     return accounts.map((acc) => {
       const mov = movementMap.get(acc.id) ?? { in: 0, out: 0 };
-      const opening = Math.round((Number(acc.openingBalance ?? 0)) * 100);
-      const currentBalanceCents = opening + mov.in - mov.out;
+      const openingCents = Math.round(safeNum(Number(acc.openingBalance ?? 0)) * 100);
+      const currentBalanceCents = openingCents + mov.in - mov.out;
       return {
         ...toBankAccountResponse(acc as BankAccountRecord),
         currentBalance: Math.round(currentBalanceCents) / 100,
@@ -132,16 +157,15 @@ export class BankAccountsService {
       }
       const entry = movementMap.get(m.bankAccountId)!;
       if (m.direction === 'in') {
-        entry.in = m._sum.amountCents ?? 0;
+        entry.in = safeNum(m._sum.amountCents);
       } else {
-        entry.out = m._sum.amountCents ?? 0;
+        entry.out = safeNum(m._sum.amountCents);
       }
     });
 
     return accounts.map((row) => {
       const mov = movementMap.get(row.id) ?? { in: 0, out: 0 };
-      const opening =
-        row.openingBalance != null ? Number(row.openingBalance) : 0;
+      const opening = safeNum(Number(row.openingBalance ?? 0));
       const currentBalance =
         Math.round((opening * 100 + mov.in - mov.out)) / 100;
 
@@ -162,6 +186,86 @@ export class BankAccountsService {
         movementsOutCents: mov.out,
       };
     });
+  }
+
+  /**
+   * Saldos por conta ativa e total. Usado por GET /bank-accounts/balances e dashboard cash-today.
+   * currentBalance = openingBalance + SUM(entradas REALIZED) - SUM(saídas REALIZED).
+   * Sempre retorna números (0 se nulo) para evitar NaN.
+   */
+  async getBalances(companyId: string): Promise<BankBalancesResponse> {
+    const accounts = await this.prisma.bankAccount.findMany({
+      where: { companyId, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (accounts.length === 0) {
+      return { totalCashToday: 0, accounts: [] };
+    }
+
+    const movementsAgg = await this.prisma.movement.groupBy({
+      by: ['bankAccountId', 'direction'],
+      where: {
+        companyId,
+        status: MovementStatus.REALIZED,
+        bankAccountId: { not: null },
+      },
+      _sum: { amountCents: true },
+    });
+
+    const movementMap = new Map<string, { in: number; out: number }>();
+    movementsAgg.forEach((m) => {
+      if (m.bankAccountId == null) return;
+      if (!movementMap.has(m.bankAccountId)) {
+        movementMap.set(m.bankAccountId, { in: 0, out: 0 });
+      }
+      const entry = movementMap.get(m.bankAccountId)!;
+      if (m.direction === 'in') {
+        entry.in = safeNum(m._sum.amountCents);
+      } else {
+        entry.out = safeNum(m._sum.amountCents);
+      }
+    });
+
+    let totalCashTodayCents = 0;
+    let openingBalanceTotal = 0;
+    let movementsInTotalCents = 0;
+    let movementsOutTotalCents = 0;
+
+    const accountsList = accounts.map((acc) => {
+      const mov = movementMap.get(acc.id) ?? { in: 0, out: 0 };
+      const openingCents = Math.round(safeNum(Number(acc.openingBalance ?? 0)) * 100);
+      const currentBalanceCents = openingCents + mov.in - mov.out;
+      totalCashTodayCents += currentBalanceCents;
+      openingBalanceTotal += safeNum(Number(acc.openingBalance ?? 0));
+      movementsInTotalCents += mov.in;
+      movementsOutTotalCents += mov.out;
+      const currentBalance = Math.round(currentBalanceCents) / 100;
+      const openingBalance = safeNum(Number(acc.openingBalance ?? 0));
+
+      return {
+        id: acc.id,
+        name: acc.name,
+        institution: acc.institution?.trim() || null,
+        agency: acc.agency?.trim() || null,
+        accountNumber: acc.accountNumber?.trim() || null,
+        accountType: acc.accountType,
+        openingBalance,
+        openingBalanceDate: acc.openingBalanceDate
+          ? acc.openingBalanceDate.toISOString().slice(0, 10)
+          : null,
+        currentBalance,
+      };
+    });
+
+    const totalCashToday = Math.round(totalCashTodayCents) / 100;
+    return {
+      totalCashToday,
+      openingBalanceTotal: Math.round(openingBalanceTotal * 100) / 100,
+      movementsInTotal: Math.round(movementsInTotalCents) / 100,
+      movementsOutTotal: Math.round(movementsOutTotalCents) / 100,
+      accounts: accountsList,
+    };
   }
 
   async getById(companyId: string, id: string) {

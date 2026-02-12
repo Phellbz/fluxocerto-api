@@ -59,6 +59,12 @@ export class BankAccountsController {
     return this.bankAccountsService.overview(companyId);
   }
 
+  @Get('balances')
+  async balances(@Req() req: any) {
+    const companyId = getCompanyIdFromRequest(req);
+    return this.bankAccountsService.getBalances(companyId);
+  }
+
   @Get(':id')
   async getById(@Param('id') id: string, @Req() req: any) {
     const companyId = getCompanyIdFromRequest(req);
