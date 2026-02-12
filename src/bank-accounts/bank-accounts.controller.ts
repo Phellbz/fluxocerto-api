@@ -7,8 +7,10 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { getCompanyIdFromRequest } from '../auth/company-id';
 import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -60,9 +62,15 @@ export class BankAccountsController {
   }
 
   @Get('balances')
-  async balances(@Req() req: any) {
+  async balances(@Req() req: any, @Res() res: Response) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
     const companyId = getCompanyIdFromRequest(req);
-    return this.bankAccountsService.getBalances(companyId);
+    const data = await this.bankAccountsService.getBalances(companyId);
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).end(JSON.stringify(data));
   }
 
   @Get(':id')
