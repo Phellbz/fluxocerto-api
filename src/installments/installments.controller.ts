@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -11,16 +12,33 @@ import {
 import { getCompanyIdFromRequest } from '../auth/company-id';
 import { CompanyGuard } from '../auth/company.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { InstallmentsSummaryQueryDto } from './dto/installments-summary.query.dto';
+import { SettleInstallmentDto } from './dto/settle-installment.dto';
 import {
   InstallmentsService,
   ListInstallmentsQuery,
 } from './installments.service';
-import { SettleInstallmentDto } from './dto/settle-installment.dto';
 
 @Controller('installments')
 @UseGuards(JwtAuthGuard, CompanyGuard)
 export class InstallmentsController {
   constructor(private readonly installmentsService: InstallmentsService) {}
+
+  @Get('summary')
+  async summary(
+    @Req() req: any,
+    @Query() query: InstallmentsSummaryQueryDto,
+  ) {
+    const companyId = getCompanyIdFromRequest(req);
+    const ids = (query.financialAccountIds ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+    if (ids.length === 0) {
+      throw new BadRequestException('financialAccountIds é obrigatório e deve conter pelo menos um id');
+    }
+    return this.installmentsService.summaryByFinancialAccounts(companyId, ids);
+  }
 
   @Get()
   async list(

@@ -26,6 +26,28 @@ export class InstallmentsService {
     private readonly paymentsService: FinancialAccountPaymentsService,
   ) {}
 
+  /**
+   * Agrega total de parcelas por financialAccountId.
+   * Retorna [{ financialAccountId, totalInstallments }] apenas para os ids informados.
+   */
+  async summaryByFinancialAccounts(
+    companyId: string,
+    financialAccountIds: string[],
+  ) {
+    const result = await this.prisma.installment.groupBy({
+      by: ['financialAccountId'],
+      where: {
+        companyId,
+        financialAccountId: { in: financialAccountIds },
+      },
+      _count: { _all: true },
+    });
+    return result.map((r) => ({
+      financialAccountId: r.financialAccountId,
+      totalInstallments: r._count._all,
+    }));
+  }
+
   async list(companyId: string, query: ListInstallmentsQuery) {
     const limit = Math.min(500, Math.max(1, parseInt(query.limit ?? '500', 10) || 500));
     const offset = Math.max(0, parseInt(query.offset ?? '0', 10) || 0);
