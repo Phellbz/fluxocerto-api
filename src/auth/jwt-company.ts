@@ -8,9 +8,7 @@ export async function getCompanyIdFromAuthHeader(
   const token = (authorization || '').replace('Bearer ', '').trim();
   if (!token) throw new UnauthorizedException('Missing token');
 
-  const payload = await jwt.verifyAsync(token, {
-    secret: process.env.JWT_SECRET || 'dev-secret-change-me',
-  });
+  const payload = await jwt.verifyAsync(token);
 
   const companyId = payload?.company_id;
   if (!companyId)

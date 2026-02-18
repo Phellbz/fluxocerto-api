@@ -140,4 +140,4 @@ Esperado: `cashToday` === `totalCashToday` e ambos === soma dos `accounts[].curr
 ## Variáveis de ambiente
 
 - `SYSTEM_ADMIN_BOOTSTRAP_SECRET`: obrigatório para `POST /system/bootstrap`
-- `JWT_SECRET`: usado para assinar o access token
+- `JWT_ACCESS_SECRET`: usado para assinar e validar o access token

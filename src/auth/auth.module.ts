@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuthController } from './auth.controller';
@@ -11,9 +12,16 @@ import { CompanyRoleGuard } from './company-role.guard';
 
 @Module({
   imports: [
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'dev-secret-change-me',
-      signOptions: { expiresIn: '15m' },
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const s = config.get<string>('JWT_ACCESS_SECRET');
+        if (!s) console.error('JWT_ACCESS_SECRET is missing');
+        return {
+          secret: s || 'dev-secret-change-me',
+          signOptions: { expiresIn: '15m' },
+        };
+      },
     }),
     PrismaModule,
   ],
