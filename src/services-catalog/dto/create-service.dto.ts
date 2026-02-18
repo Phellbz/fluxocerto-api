@@ -32,6 +32,28 @@ export class CreateServiceDto {
 
   @IsOptional()
   @IsString()
+  municipalServiceDescription?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  defaultDeductionCents?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  defaultQuantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  defaultDiscountRate?: number;
+
+  @IsOptional()
+  @IsString()
   lc116Code?: string;
 
   @IsOptional()
@@ -102,6 +124,104 @@ export class CreateServiceDto {
   @Type(() => Boolean)
   @IsBoolean()
   withholdIr?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  inssRate?: number;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  withholdInss?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  deductIssFromPisCofinsBase?: boolean;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  informTaxValueInsteadOfRate?: boolean;
+
+  @IsOptional()
+  @IsString()
+  nbsDescription?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  ibptFederalRate?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  ibptStateRate?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  ibptMunicipalRate?: number;
+
+  @IsOptional()
+  @IsString()
+  ibptSourceNote?: string;
+
+  @IsOptional()
+  @IsString()
+  reformRecipient?: string;
+
+  @IsOptional()
+  @IsString()
+  cstCode?: string;
+
+  @IsOptional()
+  @IsString()
+  cstDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  taxClassificationCode?: string;
+
+  @IsOptional()
+  @IsString()
+  taxClassificationDescription?: string;
+
+  @IsOptional()
+  @IsString()
+  operationIndicatorCode?: string;
+
+  @IsOptional()
+  @IsString()
+  operationIndicatorDescription?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  ibsMunicipalRate?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  ibsStateRate?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  cbsRate?: number;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  personalUseConsumption?: boolean;
 
   @IsOptional()
   @Type(() => Boolean)

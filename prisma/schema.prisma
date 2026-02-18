@@ -415,10 +415,15 @@ model Service {
   shortDescription     String    @map("short_description")
   serviceTaxation      String    @map("service_taxation")
   municipalServiceCode String?   @map("municipal_service_code")
+  municipalServiceDescription String? @map("municipal_service_description")
   lc116Code           String?   @map("lc116_code")
   nbsCode             String?   @map("nbs_code")
   unitPriceCents      Int?      @map("unit_price_cents")
   fullDescription     String?   @map("full_description")
+
+  defaultDeductionCents Int     @default(0) @map("default_deduction_cents")
+  defaultQuantity       Decimal? @map("default_quantity") @db.Decimal(18, 6)
+  defaultDiscountRate   Decimal? @map("default_discount_rate") @db.Decimal(18, 10)
 
   issRate      Decimal? @map("iss_rate") @db.Decimal(5, 2)
   withholdIss  Boolean  @default(false) @map("withhold_iss")
@@ -431,7 +436,31 @@ model Service {
   irRate       Decimal? @map("ir_rate") @db.Decimal(5, 2)
   withholdIr   Boolean  @default(false) @map("withhold_ir")
 
+  inssRate     Decimal? @map("inss_rate") @db.Decimal(9, 4)
+  withholdInss Boolean  @default(false) @map("withhold_inss")
+  deductIssFromPisCofinsBase Boolean @default(false) @map("deduct_iss_from_pis_cofins_base")
+  informTaxValueInsteadOfRate Boolean @default(false) @map("inform_tax_value_instead_of_rate")
+
+  nbsDescription   String?  @map("nbs_description")
+  ibptFederalRate  Decimal  @default(0) @map("ibpt_federal_rate") @db.Decimal(9, 2)
+  ibptStateRate    Decimal  @default(0) @map("ibpt_state_rate") @db.Decimal(9, 2)
+  ibptMunicipalRate Decimal @default(0) @map("ibpt_municipal_rate") @db.Decimal(9, 2)
+  ibptSourceNote   String?  @map("ibpt_source_note")
+
+  reformRecipient                String?  @map("reform_recipient")
+  cstCode                        String?  @map("cst_code")
+  cstDescription                 String?  @map("cst_description")
+  taxClassificationCode         String?  @map("tax_classification_code")
+  taxClassificationDescription  String?  @map("tax_classification_description")
+  operationIndicatorCode        String?  @map("operation_indicator_code")
+  operationIndicatorDescription String?  @map("operation_indicator_description")
+  ibsMunicipalRate              Decimal  @default(0) @map("ibs_municipal_rate") @db.Decimal(9, 4)
+  ibsStateRate                  Decimal  @default(0) @map("ibs_state_rate") @db.Decimal(9, 4)
+  cbsRate                        Decimal  @default(0) @map("cbs_rate") @db.Decimal(9, 4)
+  personalUseConsumption        Boolean  @default(false) @map("personal_use_consumption")
+
   isActive   Boolean   @default(true) @map("is_active")
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
@@ -440,6 +469,7 @@ model Service {
 
   @@unique([companyId, serviceCode], map: "services_company_service_code_unique")
   @@index([companyId, isActive], map: "services_company_active_idx")
+  @@index([companyId, createdAt], map: "services_company_created_idx")
   @@map("services")
 }
 
